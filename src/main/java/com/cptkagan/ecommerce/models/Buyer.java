@@ -15,6 +15,6 @@ import com.cptkagan.ecommerce.enums.UserRoles;
 public class Buyer extends AbstractUser {
     public Buyer(BuyerRegisterRequest dto, String password) {
         super(dto.getFirstName(), dto.getLastName(), dto.getGender(),
-              dto.getEmail(), dto.getUserName(), password, UserRoles.ROLE_BUYER, dto.getPhoneNumber());
+              dto.getEmail(), dto.getUserName(), password, UserRoles.ROLE_BUYER, dto.getPhoneNumber(), null);
     }
 }

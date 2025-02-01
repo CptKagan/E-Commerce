@@ -14,12 +14,14 @@ public class AuthService {
     private final JwtTokenUtil jwtTokenUtil;
     private final BuyerService buyerService;
     private final PasswordEncoder passwordEncoder;
+    private final SellerService sellerService;
 
-    public AuthService(AuthenticationManager authenticationMaanger, JwtTokenUtil jwtTokenUtil, BuyerService buyerService, PasswordEncoder passwordEncoder){
+    public AuthService(AuthenticationManager authenticationMaanger, JwtTokenUtil jwtTokenUtil, BuyerService buyerService, PasswordEncoder passwordEncoder, SellerService sellerService){
         this.authenticationManager = authenticationMaanger;
         this.jwtTokenUtil = jwtTokenUtil;
         this.buyerService = buyerService;
         this.passwordEncoder = passwordEncoder;
+        this.sellerService = sellerService;
     }
 
     public void authenticate(String userName, String password){
@@ -32,7 +34,7 @@ public class AuthService {
             user = buyerService.findByUserName(userName);
         }
         else if(userType.equals("SELLER")){
-            // user = sellerService.findByUserName(userName);
+            user = sellerService.findByUserName(userName);
         }
         
         if(user == null || !passwordEncoder.matches(password, user.getPassword())){

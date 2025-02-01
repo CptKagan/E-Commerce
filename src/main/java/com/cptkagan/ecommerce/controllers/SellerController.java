@@ -1,0 +1,72 @@
+package com.cptkagan.ecommerce.controllers;
+
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.cptkagan.ecommerce.DTOs.NewProduct;
+import com.cptkagan.ecommerce.DTOs.UpdateProduct;
+import com.cptkagan.ecommerce.services.SellerService;
+
+import jakarta.validation.Valid;
+
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+
+
+@RestController
+@RequestMapping("/api/seller")
+@PreAuthorize("hasRole('ROLE_SELLER')")
+public class SellerController {
+
+    @Autowired
+    private SellerService sellerService;
+
+    // public ResponseEntity<?> bindingReturn(BindingResult bindingResult) {
+    //     if (bindingResult.hasErrors()) {
+    //         Map<String, String> errors = bindingResult.getFieldErrors().stream()
+    //             .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
+    //         return ResponseEntity.badRequest().body(errors);
+    //     }
+    //     return null;
+    // }
+
+    @PostMapping("/addproduct")
+    public ResponseEntity<?> addProduct(@Valid @RequestBody NewProduct newProduct, BindingResult bindingResult, Authentication authentication) {
+        if (bindingResult.hasErrors()) {
+            Map<String, String> errors = bindingResult.getFieldErrors().stream()
+                .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
+            return ResponseEntity.badRequest().body(errors);
+        }
+
+        return sellerService.addProduct(newProduct, authentication);
+    }
+
+    @PutMapping("products/{id}")
+    public ResponseEntity<?> updateProduct(@Valid @RequestBody UpdateProduct updateProduct, @PathVariable Long id,
+                                Authentication authentication, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            Map<String, String> errors = bindingResult.getFieldErrors().stream()
+                .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
+            return ResponseEntity.badRequest().body(errors);
+        }                            
+        return sellerService.updateProduct(updateProduct, id, authentication);
+    }
+
+    @DeleteMapping("products/{id}")
+    public ResponseEntity<?> deleteProduct(@PathVariable Long id, Authentication authentication) {
+        return sellerService.deleteProduct(id, authentication);
+    }
+}

@@ -52,7 +52,7 @@ public abstract class AbstractUser {
 
 
     public AbstractUser(String firstName, String lastName, Boolean gender, String email,
-                        String userName, String password, UserRoles role, String phoneNumber) {
+                        String userName, String password, UserRoles role, String phoneNumber, String address) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
@@ -62,5 +62,11 @@ public abstract class AbstractUser {
         this.createdAt = LocalDateTime.now();
         this.role = role;
         this.phoneNumber = phoneNumber;
+        if(address != null) {
+            this.address = address;
+        }
+        else{
+            this.address = "";
+        }
     }
 }

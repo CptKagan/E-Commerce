@@ -12,6 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+// FOR CLARITY, USE hasAuthority(FULL ROLE NAME) EVERYWHERE NEXT TIME. 
+
 @Configuration
 @EnableWebSecurity
 public class WebSecurityConfig {
@@ -25,10 +27,10 @@ public class WebSecurityConfig {
             .csrf().disable()
             .cors().disable()
             .authorizeRequests()
-            .requestMatchers("/api/login/**", "/api/registerbuyer/**").permitAll()
-            .requestMatchers("/admin/**").hasAnyAuthority("ROLE_ADMIN")
-            .requestMatchers("/seller/**").hasAnyAuthority("ROLE_SELLER")
-            .requestMatchers("/buyer/**").hasAnyAuthority("ROLE_BUYER")
+            .requestMatchers("/api/login/**", "/api/register/**").permitAll()
+            .requestMatchers("/api/admin/**").hasRole("ADMIN") // hasRole = "ROLE_" ekler, hasAuthority eklemez.
+            .requestMatchers("/api/seller/**").hasRole("SELLER")
+            .requestMatchers("/api/buyer/**").hasAuthority("ROLE_BUYER") // DO NOT USE HASROLE WITH ROLE_ CUZ IN SECURITY IT PREFIXES NO MATTER WHAT. IT THROWS ERROR
             .anyRequest().authenticated()
             .and()
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
