@@ -37,8 +37,9 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if(claims != null && SecurityContextHolder.getContext().getAuthentication() == null){ // token doğru mu? && kullanıcı zaten doğrulanmış mı?
             String userName = claims.getSubject(); // Token içindeki username alınır
+            String role = claims.get("role", String.class); // Token içindeki rol alınır
 
-            List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_USER")); // Rol verilir
+            List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(role)); // Rol verilir
 
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userName, null, authorities); // Rol atanır
             SecurityContextHolder.getContext().setAuthentication(authToken); // SecurityContextHolder içerisine yerleştir

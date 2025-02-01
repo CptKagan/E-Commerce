@@ -13,9 +13,10 @@ public class JwtTokenUtil {
     private final String secret = "3viXNPoEKeapyXbHoTnL+/oDjbun6XC3gAu8PKbIt98=";
     private final long expiration = 36000000;
 
-    public String generateToken(String userName){
+    public String generateToken(String userName, String role){
         return Jwts.builder()
                    .setSubject(userName) // Saklanacak Ana Bilgi
+                   .claim("role", role)
                    .setIssuedAt(new Date())
                    .setExpiration(new Date(System.currentTimeMillis()+expiration))
                    .signWith(SignatureAlgorithm.HS256, secret)

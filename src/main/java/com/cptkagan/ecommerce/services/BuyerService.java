@@ -35,4 +35,12 @@ public class BuyerService {
         buyerRepository.save(buyer);
         return ResponseEntity.ok("User registered successfully");
     }
+
+    public Buyer findByUserName (String userName){
+        Optional<Buyer> buyer = buyerRepository.findByUserName(userName);
+        if(buyer.isPresent()){
+            return buyer.get();
+        }
+        return null;
+    }
 }

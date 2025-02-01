@@ -31,10 +31,7 @@ public class AccountController {
     private AuthService authService;
 
     @Autowired
-    private JwtTokenUtil jwtTokenUtil;
-
-    @Autowired
-    private BuyerService accountService;
+    private BuyerService buyerService;
 
 
     @PostMapping("/registerbuyer")
@@ -45,27 +42,35 @@ public class AccountController {
                 return ResponseEntity.badRequest().body(errors);
         }
         try{
-            return accountService.registerBuyer(buyerRegisterRequest);
+            return buyerService.registerBuyer(buyerRegisterRequest);
         }
         catch(Exception e){
             return ResponseEntity.badRequest().body("User could not be registered");
         }
     }
     
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest, BindingResult bindingResult){
+    @PostMapping("/login/buyer")
+    public ResponseEntity<?> buyerLogin(@Valid @RequestBody LoginRequest loginRequest, BindingResult bindingResult){
+        return handleLogin(loginRequest, bindingResult, "BUYER");
+    }
+
+    @PostMapping("/login/seller")
+    public ResponseEntity<?> sellerLogin(@Valid @RequestBody LoginRequest loginRequest, BindingResult bindingResult){
+        return handleLogin(loginRequest, bindingResult, "SELLER");
+    }
+
+    private ResponseEntity<?> handleLogin(LoginRequest loginRequest, BindingResult bindingResult, String userType) {
         if(bindingResult.hasErrors()){
             Map<String, String> errors = bindingResult.getFieldErrors().stream()
                 .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
                 return ResponseEntity.badRequest().body(errors);
         }
-        try{
-            authService.authenticate(loginRequest.getUserName(), loginRequest.getPassword());
-            String token = jwtTokenUtil.generateToken(loginRequest.getUserName());
+        try {
+            String token = authService.login(loginRequest.getUserName(), loginRequest.getPassword(), userType);
             return ResponseEntity.ok(token);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
-        catch(Exception e){
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
-        }
+        
     }
 }
