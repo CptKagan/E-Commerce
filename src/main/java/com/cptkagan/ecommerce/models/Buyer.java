@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import com.cptkagan.ecommerce.DTOs.BuyerRegisterRequest;
+import com.cptkagan.ecommerce.DTOs.requestDTO.BuyerRegisterRequest;
 import com.cptkagan.ecommerce.enums.UserRoles;
 
 @Entity

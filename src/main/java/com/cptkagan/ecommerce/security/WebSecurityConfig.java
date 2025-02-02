@@ -27,7 +27,7 @@ public class WebSecurityConfig {
             .csrf().disable()
             .cors().disable()
             .authorizeRequests()
-            .requestMatchers("/api/login/**", "/api/register/**").permitAll()
+            .requestMatchers("/api/login/**", "/api/register/**", "/api/products/**", "/error").permitAll()
             .requestMatchers("/api/admin/**").hasRole("ADMIN") // hasRole = "ROLE_" ekler, hasAuthority eklemez.
             .requestMatchers("/api/seller/**").hasRole("SELLER")
             .requestMatchers("/api/buyer/**").hasAuthority("ROLE_BUYER") // DO NOT USE HASROLE WITH ROLE_ CUZ IN SECURITY IT PREFIXES NO MATTER WHAT. IT THROWS ERROR

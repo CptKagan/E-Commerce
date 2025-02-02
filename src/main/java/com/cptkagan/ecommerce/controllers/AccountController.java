@@ -2,10 +2,9 @@ package com.cptkagan.ecommerce.controllers;
 
 import org.springframework.web.bind.annotation.RestController;
 
-import com.cptkagan.ecommerce.DTOs.BuyerRegisterRequest;
-import com.cptkagan.ecommerce.DTOs.LoginRequest;
-import com.cptkagan.ecommerce.DTOs.SellerRegisterRequest;
-
+import com.cptkagan.ecommerce.DTOs.requestDTO.BuyerRegisterRequest; 
+import com.cptkagan.ecommerce.DTOs.requestDTO.LoginRequest;
+import com.cptkagan.ecommerce.DTOs.requestDTO.SellerRegisterRequest;
 import com.cptkagan.ecommerce.services.BuyerService;
 import com.cptkagan.ecommerce.services.SellerService;
 import com.cptkagan.ecommerce.services.AuthService;

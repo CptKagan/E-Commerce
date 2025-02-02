@@ -1,4 +1,4 @@
-package com.cptkagan.ecommerce.DTOs;
+package com.cptkagan.ecommerce.DTOs.requestDTO;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

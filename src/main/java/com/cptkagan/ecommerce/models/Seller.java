@@ -2,7 +2,7 @@ package com.cptkagan.ecommerce.models;
 
 import java.util.List;
 
-import com.cptkagan.ecommerce.DTOs.SellerRegisterRequest;
+import com.cptkagan.ecommerce.DTOs.requestDTO.SellerRegisterRequest;
 import com.cptkagan.ecommerce.enums.UserRoles;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 

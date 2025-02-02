@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.cptkagan.ecommerce.DTOs.BuyerRegisterRequest;
+import com.cptkagan.ecommerce.DTOs.requestDTO.BuyerRegisterRequest;
 import com.cptkagan.ecommerce.models.Buyer;
 import com.cptkagan.ecommerce.repositories.BuyerRepository;
 

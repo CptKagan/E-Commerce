@@ -12,8 +12,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.cptkagan.ecommerce.DTOs.NewProduct;
-import com.cptkagan.ecommerce.DTOs.UpdateProduct;
+import com.cptkagan.ecommerce.DTOs.requestDTO.NewProduct;
+import com.cptkagan.ecommerce.DTOs.requestDTO.UpdateProduct;
 import com.cptkagan.ecommerce.services.SellerService;
 
 import jakarta.validation.Valid;
@@ -23,6 +23,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 
 

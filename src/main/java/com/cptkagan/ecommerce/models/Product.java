@@ -2,7 +2,7 @@ package com.cptkagan.ecommerce.models;
 
 import java.time.LocalDateTime;
 
-import com.cptkagan.ecommerce.DTOs.NewProduct;
+import com.cptkagan.ecommerce.DTOs.requestDTO.NewProduct;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import jakarta.persistence.Column;

@@ -12,15 +12,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.cptkagan.ecommerce.DTOs.NewProduct;
-import com.cptkagan.ecommerce.DTOs.SellerRegisterRequest;
-import com.cptkagan.ecommerce.DTOs.UpdateProduct;
+import com.cptkagan.ecommerce.DTOs.requestDTO.NewProduct;
+import com.cptkagan.ecommerce.DTOs.requestDTO.SellerRegisterRequest;
+import com.cptkagan.ecommerce.DTOs.requestDTO.UpdateProduct;
 import com.cptkagan.ecommerce.models.Product;
 import com.cptkagan.ecommerce.models.Seller;
 import com.cptkagan.ecommerce.repositories.ProductRepository;
 import com.cptkagan.ecommerce.repositories.SellerRepository;
-
-import jakarta.validation.Valid;
 
 @Service
 public class SellerService {
