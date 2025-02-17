@@ -17,23 +17,22 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
-    @GetMapping("/products")
-    public ResponseEntity<?> getProducts(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
-        return productService.getProducts(page, size);
-    }
-
     @GetMapping("/products/id/{id}")
     public ResponseEntity<?> getSingleProduct(@PathVariable Long id) {
         return productService.getSingleProduct(id);
     }
-    
-    @GetMapping("/products/category")
-    public ResponseEntity<?> getProductsCategory(@RequestParam String category, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
-        return productService.getProductsCategory(category, page, size);
+
+    @GetMapping("/products/filter")
+    public ResponseEntity<?> getFilteredProducts(@RequestParam(required = false) String category,
+                                                 @RequestParam(required = false) Double minPrice,
+                                                 @RequestParam(required = false) Double maxPrice,
+                                                 @RequestParam(required = false) Boolean inStock,
+                                                 @RequestParam(required = false) Long sellerId,
+                                                 @RequestParam(defaultValue = "0") int page,
+                                                 @RequestParam(defaultValue = "10") int size,
+                                                 @RequestParam(defaultValue = "createdAt") String sortBy,
+                                                 @RequestParam(defaultValue = "asc") String sortDirection,
+                                                 @RequestParam(required = false) String name) {
+        return productService.getFilteredProducts(category, minPrice, maxPrice, inStock, sellerId, page, size, sortBy, sortDirection, name);
     }
-    
-    @GetMapping("/products/search")
-    public ResponseEntity<?> getProductsName(@RequestParam String name, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
-        return productService.getProductsName(name, page, size);
-    }   
 }
