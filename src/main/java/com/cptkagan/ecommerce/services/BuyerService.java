@@ -1,15 +1,21 @@
 package com.cptkagan.ecommerce.services;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.cptkagan.ecommerce.DTOs.requestDTO.BuyerRegisterRequest;
+import com.cptkagan.ecommerce.DTOs.responseDTO.OrderHistory;
 import com.cptkagan.ecommerce.models.Buyer;
+import com.cptkagan.ecommerce.models.Order;
 import com.cptkagan.ecommerce.repositories.BuyerRepository;
+import com.cptkagan.ecommerce.repositories.OrderRepository;
 
 @Service
 public class BuyerService {
@@ -20,6 +26,8 @@ public class BuyerService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private OrderRepository orderRepository;
 
 
     public ResponseEntity<?> registerBuyer(BuyerRegisterRequest buyerRegisterRequest) {
@@ -42,5 +50,17 @@ public class BuyerService {
             return buyer.get();
         }
         return null;
+    }
+
+    public ResponseEntity<?> getOrderHistory(Authentication authentication) {
+        Buyer buyer = findByUserName(authentication.getName());
+        if(buyer == null){
+            return ResponseEntity.badRequest().body("User not found!");
+        }
+        List<Order> orders = orderRepository.findByBuyerId(buyer.getId());
+
+        List<OrderHistory> orderHistory = orders.stream().map(OrderHistory::new).collect(Collectors.toList());
+
+        return ResponseEntity.ok(orderHistory);
     }
 }

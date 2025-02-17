@@ -10,17 +10,48 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.cptkagan.ecommerce.DTOs.responseDTO.ProductResponse;
 import com.cptkagan.ecommerce.models.Product;
 import com.cptkagan.ecommerce.repositories.ProductRepository;
+import com.cptkagan.ecommerce.specifications.ProductSpecification;
 
 @Service
 public class ProductService {
     @Autowired
     private ProductRepository productRepository;
+
+    public ResponseEntity<?> getFilteredProducts(String category, Double minPrice,
+                                                Double maxPrice, Boolean inStock,
+                                                Long sellerId,int page, int size,
+                                                String sortBy, String sortDirection,
+                                                String name){
+        Specification<Product> spec = Specification.where(ProductSpecification.hasCategory(category))
+                                                   .and(ProductSpecification.hasPriceBetween(minPrice,maxPrice))
+                                                   .and(ProductSpecification.isInStock(inStock))
+                                                   .and(ProductSpecification.hasSeller(sellerId))
+                                                   .and(ProductSpecification.hasName(name));
+        
+        Sort.Direction direction;
+        if(sortDirection.equalsIgnoreCase("asc")){
+            direction = Sort.Direction.ASC;
+        }
+        else{
+            direction = Sort.Direction.DESC;
+        }
+
+        Pageable pageable = PageRequest.of(page,size, Sort.by(direction, sortBy));
+
+        Page<Product> productPage = productRepository.findAll(spec,pageable);
+
+        return ResponseEntity.ok(createPaginatedResponse(productPage));
+    }
+
+
 
     private Map<String, Object> createPaginatedResponse(Page<Product> productPage) {
         List<Product> products = productPage.getContent();
@@ -41,13 +72,6 @@ public class ProductService {
         return response;
     }
 
-    public ResponseEntity<?> getProducts(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Product> productPage = productRepository.findAll(pageable);
-
-        return ResponseEntity.ok(createPaginatedResponse(productPage));
-    }
-
     public ResponseEntity<?> getSingleProduct(Long id) {
         Optional<Product> products = productRepository.findById(id);
         if (!products.isPresent()) {
@@ -55,19 +79,5 @@ public class ProductService {
         }
 
         return ResponseEntity.ok(new ProductResponse(products.get()));
-    }
-
-    public ResponseEntity<?> getProductsCategory(String category, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Product> productPage = productRepository.findByCategory(category, pageable);
-
-        return ResponseEntity.ok(createPaginatedResponse(productPage));
-    }
-
-    public ResponseEntity<?> getProductsName(String name, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Product> productPage = productRepository.findByNameContaining(name, pageable);
-
-        return ResponseEntity.ok(createPaginatedResponse(productPage));
     }
 }

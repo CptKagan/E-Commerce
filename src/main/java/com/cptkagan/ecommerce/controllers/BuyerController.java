@@ -1,10 +1,27 @@
 package com.cptkagan.ecommerce.controllers;
 
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.cptkagan.ecommerce.DTOs.requestDTO.OrderRequest;
+import com.cptkagan.ecommerce.services.BuyerService;
+import com.cptkagan.ecommerce.services.OrderService;
+
+import jakarta.validation.Valid;
+
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
+
 
 
 @RestController
@@ -14,9 +31,27 @@ import org.springframework.web.bind.annotation.GetMapping;
                                        // IT CHECKS IF THE ROLE HAS "ROLE_" IN IT.
 public class BuyerController {
 
-    @GetMapping("/deneme")
-    public ResponseEntity<?> deneme() {
-        return ResponseEntity.ok("Buyer accessed");
+    @Autowired
+    private OrderService orderService;
+
+    @Autowired
+    private BuyerService buyerService;
+
+    @PostMapping("/placeorder")
+    public ResponseEntity<?> placeOrder(@Valid @RequestBody OrderRequest orderRequest, BindingResult bindingResult, Authentication authentication) {
+        if (bindingResult.hasErrors()) {
+            Map<String, String> errors = bindingResult.getFieldErrors().stream()
+                .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
+            return ResponseEntity.badRequest().body(errors);
+        }
+
+        return orderService.placeOrder(orderRequest, authentication);
     }
+
+    @GetMapping("/orderhistory")
+    public ResponseEntity<?> getOrderHistory(Authentication authentication) {
+        return buyerService.getOrderHistory(authentication);
+    }
+    
     
 }
