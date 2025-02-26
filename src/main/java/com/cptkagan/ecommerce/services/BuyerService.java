@@ -12,9 +12,12 @@ import org.springframework.stereotype.Service;
 
 import com.cptkagan.ecommerce.DTOs.requestDTO.BuyerRegisterRequest;
 import com.cptkagan.ecommerce.DTOs.responseDTO.OrderHistory;
+import com.cptkagan.ecommerce.enums.OrderStatus;
 import com.cptkagan.ecommerce.models.Buyer;
 import com.cptkagan.ecommerce.models.Order;
+import com.cptkagan.ecommerce.models.OrderItem;
 import com.cptkagan.ecommerce.repositories.BuyerRepository;
+import com.cptkagan.ecommerce.repositories.OrderItemRepository;
 import com.cptkagan.ecommerce.repositories.OrderRepository;
 
 @Service
@@ -28,6 +31,9 @@ public class BuyerService {
 
     @Autowired
     private OrderRepository orderRepository;
+
+    @Autowired
+    private OrderItemRepository orderItemRepository;
 
 
     public ResponseEntity<?> registerBuyer(BuyerRegisterRequest buyerRegisterRequest) {
@@ -62,5 +68,65 @@ public class BuyerService {
         List<OrderHistory> orderHistory = orders.stream().map(OrderHistory::new).collect(Collectors.toList());
 
         return ResponseEntity.ok(orderHistory);
+    }
+
+    public ResponseEntity<?> cancelOrderItem(Long id, Authentication authentication) {
+        Buyer buyer = findByUserName(authentication.getName());
+        if(buyer == null){
+            return ResponseEntity.badRequest().body("Usernot found!");
+        }
+
+        Optional<OrderItem> orderItemOpt = orderItemRepository.findById(id);
+        if(orderItemOpt.isEmpty()){
+            return ResponseEntity.badRequest().body("Item not found!");
+        }
+
+        OrderItem orderItem = orderItemOpt.get();
+
+        if(!orderItem.getOrder().getBuyer().getId().equals(buyer.getId())){
+            return ResponseEntity.badRequest().body("Item does not belong to the user!");
+        }
+
+        if(orderItem.getStatus().equals(OrderStatus.SHIPPED) || orderItem.getStatus().equals(OrderStatus.DELIVERED)){
+            return ResponseEntity.badRequest().body("Item is already shipped or delivered, cannot be cancelled!");
+        }
+
+        orderItem.setStatus(OrderStatus.CANCELED);
+        orderItemRepository.save(orderItem);
+        return ResponseEntity.ok("Order item cancelled successfully!");
+    }
+
+    public ResponseEntity<?> cancelOrder(Long id, Authentication authentication) {
+        Buyer buyer = findByUserName(authentication.getName());
+        if(buyer == null){
+            return ResponseEntity.badRequest().body("User not found!");
+        }
+
+        Optional<Order> orderOpt = orderRepository.findById(id);
+        if(orderOpt.isEmpty()){
+            return ResponseEntity.badRequest().body("Order not found!");
+        }
+
+        Order order = orderOpt.get();
+
+        if(!order.getBuyer().getId().equals(buyer.getId())){
+            return ResponseEntity.badRequest().body("Order does not belong to the user!");
+        }
+
+        if(order.getStatus().equals(OrderStatus.SHIPPED) || order.getStatus().equals(OrderStatus.DELIVERED)){
+            return ResponseEntity.badRequest().body("Order is already shipped or delivered, cannot be cancelled!");
+        }
+
+        order.setStatus(OrderStatus.CANCELED);
+        orderRepository.save(order);
+
+        for(int i=0; i<order.getOrderItems().size(); i++){
+            if(!order.getOrderItems().get(i).getStatus().equals(OrderStatus.SHIPPED) && !order.getOrderItems().get(i).getStatus().equals(OrderStatus.DELIVERED)){
+                order.getOrderItems().get(i).setStatus(OrderStatus.CANCELED);
+                orderItemRepository.save(order.getOrderItems().get(i));
+            }
+        }
+
+        return ResponseEntity.ok("Order cancelled succesfully. All items that are not already SHIPPED OR DELIVERED are cancelled!");
     }
 }

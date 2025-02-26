@@ -80,4 +80,18 @@ public class OrderService {
 
         return ResponseEntity.ok("Order placed successfully");
     }
+
+    public void checkOrderStatus (Order order){
+        if(order.getOrderItems().isEmpty()){
+            return;
+        }
+        OrderStatus firstStatus = order.getOrderItems().get(0).getStatus();
+        for(int i = 1; i<order.getOrderItems().size()-1; i++){
+            if(order.getOrderItems().get(i).getStatus() != firstStatus){
+                return;
+            }
+        }
+        order.setStatus(firstStatus);
+        orderRepository.save(order);
+    }
 }

@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+
 
 
 
@@ -72,4 +72,21 @@ public class SellerController {
     public ResponseEntity<?> deleteProduct(@PathVariable Long id, Authentication authentication) {
         return sellerService.deleteProduct(id, authentication);
     }
+
+    @GetMapping("/orderhistory")
+    public ResponseEntity<?> orderHistory(Authentication authentication) {
+        return sellerService.orderHistory(authentication);
+    }
+    
+    @PutMapping("/updatestatus/{id}/{status}") // STATUS UPDATE // PATH OLARAK ALIYORUZ, BUNUN DEĞİŞMESİ GEREKLİ
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @PathVariable int status,Authentication authentication) {
+        return sellerService.updateStatus(id, status, authentication);
+    }
+
+    // ZAMANA GÖRE FİLTRELEME YAPILACAK
+    @GetMapping("/salesreport")
+    public ResponseEntity<?> salesReport(Authentication authentication) {
+        return sellerService.salesReport(authentication);
+    }
+    
 }

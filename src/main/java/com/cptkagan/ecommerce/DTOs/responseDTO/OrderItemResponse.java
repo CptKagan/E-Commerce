@@ -16,12 +16,15 @@ public class OrderItemResponse {
 
     private ProductResponse productResponse;
 
+    private String status;
+
     private int quantity;
 
     public OrderItemResponse(OrderItem orderItem){
         this.id = orderItem.getId();
         this.orderId = orderItem.getId();
         this.productResponse = new ProductResponse(orderItem.getProduct());
+        this.status = orderItem.getStatus().toString();
         this.quantity = orderItem.getQuantity();
     }
 }

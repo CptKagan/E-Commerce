@@ -82,7 +82,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             product.setName("Product " + i + " - " + seller.getCompanyName());
             product.setDescription("This is product " + i + " from " + seller.getCompanyName());
             product.setPrice(10 + (random.nextDouble() * 90)); // Random price between 10-100
-            product.setStockQuantity(random.nextInt(50) + 1); // Stock between 1-50
+            product.setStockQuantity(random.nextInt(50) + 10); // Stock between 10-50
             product.setCategory(i % 2 == 0 ? "Electronics" : "Office Supplies");
             product.setCreatedAt(LocalDateTime.now());
             product.setUpdatedAt(LocalDateTime.now());

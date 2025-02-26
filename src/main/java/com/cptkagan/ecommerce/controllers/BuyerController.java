@@ -21,6 +21,7 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 
 
@@ -53,5 +54,13 @@ public class BuyerController {
         return buyerService.getOrderHistory(authentication);
     }
     
+    @PostMapping("/cancelorderitem/{id}")
+    public ResponseEntity<?> cancelOrderItem(@PathVariable Long id, Authentication authentication) {
+        return buyerService.cancelOrderItem(id, authentication);
+    }
     
+    @PostMapping("/cancelorder/{id}")
+    public ResponseEntity<?> cancelOrder(@PathVariable Long id, Authentication authentication){
+        return buyerService.cancelOrder(id, authentication);
+    }
 }

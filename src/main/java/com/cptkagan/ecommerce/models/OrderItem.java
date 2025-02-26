@@ -1,6 +1,10 @@
 package com.cptkagan.ecommerce.models;
 
+import com.cptkagan.ecommerce.enums.OrderStatus;
+
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -29,9 +33,13 @@ public class OrderItem {
 
     private int quantity;
 
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status; // STATUS UPDATE
+
     public OrderItem(Order order, Product product, int quantity) {
         this.order = order;
         this.product = product;
         this.quantity = quantity;
+        this.status = order.getStatus(); // STATUS UPDATE
     }
 }
