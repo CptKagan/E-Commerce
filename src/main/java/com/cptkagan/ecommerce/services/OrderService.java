@@ -2,10 +2,13 @@ package com.cptkagan.ecommerce.services;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -13,11 +16,19 @@ import org.springframework.stereotype.Service;
 import com.cptkagan.ecommerce.DTOs.requestDTO.OrderRequest;
 import com.cptkagan.ecommerce.enums.OrderStatus;
 import com.cptkagan.ecommerce.models.Buyer;
+import com.cptkagan.ecommerce.models.Cart;
 import com.cptkagan.ecommerce.models.Order;
 import com.cptkagan.ecommerce.models.OrderItem;
 import com.cptkagan.ecommerce.models.Product;
+import com.cptkagan.ecommerce.repositories.CartRepository;
 import com.cptkagan.ecommerce.repositories.OrderRepository;
 import com.cptkagan.ecommerce.repositories.ProductRepository;
+import com.stripe.Stripe;
+import com.stripe.exception.StripeException;
+import com.stripe.model.PaymentIntent;
+import com.stripe.model.PaymentMethod;
+import com.stripe.param.PaymentIntentCreateParams;
+import com.stripe.param.PaymentMethodCreateParams;
 
 @Service
 public class OrderService {
@@ -30,25 +41,67 @@ public class OrderService {
     @Autowired
     private BuyerService buyerService;
 
-    // ------------------- BLOCKING MUST BE ADDED HERE ----------------------
+    @Autowired
+    private CartRepository cartRepository;
+
+    @Value("${stripe.secret.key}")
+    private String stripeSecretKey;
+
     public ResponseEntity<?> placeOrder(OrderRequest orderRequest, Authentication authentication) {
         Buyer buyer = buyerService.findByUserName(authentication.getName());
         if(buyer == null){
             return ResponseEntity.badRequest().body("User not found");
         }
 
-        // CHECK STOCKS (IDK HOW TO BLOCK STOCK WHILE GETTING MULTIPLE REQUESTS)
-        for(int i = 0; i<orderRequest.getProducts().size();i++){
-            Optional<Product> productOpt = productRepository.findById(orderRequest.getProducts().get(i).getProductId());
-            if(productOpt.isEmpty()){
-                return ResponseEntity.badRequest().body("Product not found");
-            }
-            Product product = productOpt.get();
-            if(product.getStockQuantity() < orderRequest.getProducts().get(i).getQuantity()){
-                return ResponseEntity.badRequest().body("Not enough stock for product: " + product.getName() + ". Stock: " + product.getStockQuantity());
-            }
+        List<Cart> cart = cartRepository.findAllByBuyerId(buyer.getId());
+        if(cart.isEmpty()){
+            return ResponseEntity.badRequest().body("Cart is empty!");
         }
 
+        double totalPrice = 0;
+        // CHECK STOCKS (IDK HOW TO BLOCK STOCK WHILE GETTING MULTIPLE REQUESTS)
+        for(Cart cartItem : cart){
+            if(cartItem.getProduct().getStockQuantity() < cartItem.getQuantity()){
+                return ResponseEntity.badRequest().body("Stock is not enough for " + cartItem.getProduct().getName());
+            }
+            totalPrice += cartItem.getProduct().getPrice() * cartItem.getQuantity();
+        }
+
+        // Everything is fine, proceed to payment
+        try{
+            Stripe.apiKey = stripeSecretKey;
+
+                // Process payment
+                Map<String, Object> paymentMethodParams = new HashMap<>();
+                paymentMethodParams.put("type", "card");
+                paymentMethodParams.put("card", Map.of("token", orderRequest.getPayment().getPaymentToken()));
+
+                PaymentMethod paymentMethod = PaymentMethod.create(paymentMethodParams);
+
+                PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
+                    .setAmount((long) (totalPrice * 100)) // IN CENTS
+                    .setCurrency("usd")
+                    .setPaymentMethod(paymentMethod.getId())
+                    .setConfirm(true)
+                    .setDescription("E-commerce Order Payment")
+                    .setAutomaticPaymentMethods(
+                        PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
+                            .setEnabled(true)
+                            .setAllowRedirects(PaymentIntentCreateParams.AutomaticPaymentMethods.AllowRedirects.NEVER)
+                            .build()
+                    )
+                    .build();
+
+                PaymentIntent intent = PaymentIntent.create(params);
+
+                if(!intent.getStatus().equals("succeeded")){
+                    return ResponseEntity.badRequest().body("Payment Failed!");
+                }
+        } catch(StripeException e){
+            return ResponseEntity.badRequest().body("Stripe payment error: "+ e.getMessage());
+        }
+
+        // PAYMENT SUCCESS
         // PLACE ORDER
         Order order = new Order();
         order.setBuyer(buyer);
@@ -58,25 +111,22 @@ public class OrderService {
         orderRepository.save(order);
 
         List<OrderItem> orderItems = new ArrayList<>();
-        double totalPrice = 0;
-
         // UPDATE STOCKS, STORE ORDER ITEMS
-        for(int i =0; i<orderRequest.getProducts().size(); i++){
-            Product product = productRepository.findById(orderRequest.getProducts().get(i).getProductId()).get();
-
-            product.setStockQuantity(product.getStockQuantity() - orderRequest.getProducts().get(i).getQuantity());
+        for(Cart cartItems : cart){
+            Product product = cartItems.getProduct();
+            product.setStockQuantity(product.getStockQuantity() - cartItems.getQuantity());
             productRepository.save(product);
 
-            OrderItem orderItem = new OrderItem(order, product, orderRequest.getProducts().get(i).getQuantity());
+            OrderItem orderItem = new OrderItem(order, product, cartItems.getQuantity());
             orderItems.add(orderItem);
-
-            totalPrice += product.getPrice() * orderRequest.getProducts().get(i).getQuantity();
         }
 
         // UPDATE ORDER
         order.setOrderItems(orderItems);
         order.setTotalPrice(totalPrice);
         orderRepository.save(order);
+
+        cartRepository.deleteAll(cart);
 
         return ResponseEntity.ok("Order placed successfully");
     }

@@ -2,6 +2,8 @@ package com.cptkagan.ecommerce.DTOs.requestDTO;
 
 import java.util.List;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -11,15 +13,16 @@ import lombok.Setter;
 @NoArgsConstructor
 public class OrderRequest {
 
-    private List<ProductOrderItem> products;
+    @NotNull(message = "Payment details are required!")
+    private PaymentInfo payment;
 
     private String address;
 
     @Getter
     @Setter
     @NoArgsConstructor
-    public static class ProductOrderItem{
-        private Long productId;
-        private int quantity;
+    public static class PaymentInfo{
+        @NotBlank(message = "Token cannot be blank!")
+        private String paymentToken;
     }
 }
