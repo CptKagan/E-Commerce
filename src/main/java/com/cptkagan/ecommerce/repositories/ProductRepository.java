@@ -1,5 +1,6 @@
 package com.cptkagan.ecommerce.repositories;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,4 +20,5 @@ import com.cptkagan.ecommerce.models.Product;
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
     boolean existsBySellerIdAndName(Long sellerId, String name);
     Optional<Product> findById(Long id);
+    List<Product> findAllBySellerId(Long sellerId);
 }

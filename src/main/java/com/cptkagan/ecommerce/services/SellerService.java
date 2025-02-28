@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import com.cptkagan.ecommerce.DTOs.requestDTO.NewProduct;
 import com.cptkagan.ecommerce.DTOs.requestDTO.SellerRegisterRequest;
 import com.cptkagan.ecommerce.DTOs.requestDTO.UpdateProduct;
+import com.cptkagan.ecommerce.DTOs.responseDTO.LowStockWarning;
 import com.cptkagan.ecommerce.DTOs.responseDTO.OrdersSeller;
 import com.cptkagan.ecommerce.DTOs.responseDTO.SalesReportResponse;
 import com.cptkagan.ecommerce.enums.OrderStatus;
@@ -286,5 +287,28 @@ public class SellerService {
         );
 
         return ResponseEntity.ok(report);
+    }
+
+    public ResponseEntity<?> lowStock(Authentication authentication) {
+        Seller seller = findByUserName(authentication.getName());
+        if(seller == null){
+            return ResponseEntity.badRequest().body("Seller not found!");
+        }
+
+        List<Product> products = productRepository.findAllBySellerId(seller.getId());
+        if(products.isEmpty()){
+            return ResponseEntity.badRequest().body("No products found!");
+        }
+
+        List<Product> lowStockProducts = new ArrayList<>();
+        for(Product product : products){
+            if(product.getStockQuantity() < 5){
+                lowStockProducts.add(product);
+            }
+        }
+
+        List<LowStockWarning> lowStockWarnings = lowStockProducts.stream().map(LowStockWarning::new).collect(Collectors.toList());
+
+        return ResponseEntity.ok(lowStockWarnings);
     }
 }

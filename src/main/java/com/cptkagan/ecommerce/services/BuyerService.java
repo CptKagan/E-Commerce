@@ -1,6 +1,7 @@
 package com.cptkagan.ecommerce.services;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -11,14 +12,20 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.cptkagan.ecommerce.DTOs.requestDTO.BuyerRegisterRequest;
+import com.cptkagan.ecommerce.DTOs.requestDTO.CartRequest;
+import com.cptkagan.ecommerce.DTOs.responseDTO.CartResponse;
 import com.cptkagan.ecommerce.DTOs.responseDTO.OrderHistory;
 import com.cptkagan.ecommerce.enums.OrderStatus;
 import com.cptkagan.ecommerce.models.Buyer;
+import com.cptkagan.ecommerce.models.Cart;
 import com.cptkagan.ecommerce.models.Order;
 import com.cptkagan.ecommerce.models.OrderItem;
+import com.cptkagan.ecommerce.models.Product;
 import com.cptkagan.ecommerce.repositories.BuyerRepository;
+import com.cptkagan.ecommerce.repositories.CartRepository;
 import com.cptkagan.ecommerce.repositories.OrderItemRepository;
 import com.cptkagan.ecommerce.repositories.OrderRepository;
+import com.cptkagan.ecommerce.repositories.ProductRepository;
 
 @Service
 public class BuyerService {
@@ -34,6 +41,12 @@ public class BuyerService {
 
     @Autowired
     private OrderItemRepository orderItemRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired
+    private CartRepository cartRepository;
 
 
     public ResponseEntity<?> registerBuyer(BuyerRegisterRequest buyerRegisterRequest) {
@@ -128,5 +141,104 @@ public class BuyerService {
         }
 
         return ResponseEntity.ok("Order cancelled succesfully. All items that are not already SHIPPED OR DELIVERED are cancelled!");
+    }
+
+    public ResponseEntity<?> addProductToCart(CartRequest cartRequest, Authentication authentication) {
+        Buyer buyer = findByUserName(authentication.getName());
+        if(buyer == null){
+            return ResponseEntity.badRequest().body("User not found!");
+        }
+
+        Optional<Product> productOpt = productRepository.findById(cartRequest.getProductId());
+        if(!productOpt.isPresent()){
+            return ResponseEntity.badRequest().body("Product not found!");
+        }
+
+        if(cartRequest.getQuantity() <= 0){
+            return ResponseEntity.badRequest().body("Quantity must be greated than 0!");
+        }
+
+        Optional<Cart> cartOpt = cartRepository.findByBuyerIdAndProductId(buyer.getId(), cartRequest.getProductId());
+        if(cartOpt.isPresent()){
+            Cart cart = cartOpt.get();
+            cart.setQuantity(cart.getQuantity() + cartRequest.getQuantity());
+            cartRepository.save(cart);
+            return ResponseEntity.ok("Product quantity updated in cart!");
+        }
+
+        Cart cart = new Cart();
+        cart.setBuyer(buyer);
+        cart.setProduct(productOpt.get());
+        cart.setQuantity(cartRequest.getQuantity());
+
+        cartRepository.save(cart);
+        return ResponseEntity.ok("Product added to cart successfully!");
+    }
+
+    public ResponseEntity<?> getCart(Authentication authentication) {
+        Buyer buyer = findByUserName(authentication.getName());
+        if(buyer == null){
+            return ResponseEntity.badRequest().body("User not found!");
+        }
+
+        List<Cart> cart = cartRepository.findAllByBuyerId(buyer.getId());
+        if(cart.isEmpty()){
+            return ResponseEntity.ok("Cart is empty!");
+        }
+
+        List<CartResponse> cartResponse = cart.stream().map(CartResponse::new).collect(Collectors.toList());
+        double totalPriceofAll = 0;
+        for(CartResponse c : cartResponse){
+            totalPriceofAll += c.getPrice() * c.getQuantity();
+        }
+
+        Map<String, Object> response = Map.of("cartItems", cartResponse, "totalPrice", totalPriceofAll);
+
+        return ResponseEntity.ok(response);
+    }
+
+    public ResponseEntity<?> updateCart(Long id, Authentication authentication, Integer quantity) {
+        Buyer buyer = findByUserName(authentication.getName());
+        if(buyer == null){
+            return ResponseEntity.badRequest().body("User not found!");
+        }
+
+        Optional<Cart> cartOpt = cartRepository.findById(id);
+        if(!cartOpt.isPresent()){
+            return ResponseEntity.badRequest().body("Cart item not found!");
+        }
+
+        Cart cart = cartOpt.get();
+        if(!cart.getBuyer().getId().equals(buyer.getId())){
+            return ResponseEntity.badRequest().body("Cart item does not belong to the user!");
+        }
+
+        if(quantity <= 0){
+            return ResponseEntity.badRequest().body("Quantity must be greater than 0!");
+        }
+
+        cart.setQuantity(quantity);
+        cartRepository.save(cart);
+        return ResponseEntity.ok("Cart updated Successfully!");
+    }
+
+    public ResponseEntity<?> deleteCart(Long id, Authentication authentication) {
+        Buyer buyer = findByUserName(authentication.getName());
+        if(buyer == null){
+            return ResponseEntity.badRequest().body("User not found!");
+        }
+
+        Optional<Cart> cartOpt = cartRepository.findById(id);
+        if(!cartOpt.isPresent()){
+            return ResponseEntity.badRequest().body("Cart item not found!");
+        }
+
+        Cart cart = cartOpt.get();
+        if(!cart.getBuyer().getId().equals(buyer.getId())){
+            return ResponseEntity.badRequest().body("Cart item does not belong to the user!");
+        }
+
+        cartRepository.delete(cart);
+        return ResponseEntity.ok("Cart item deleted successfully!");
     }
 }

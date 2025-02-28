@@ -3,10 +3,8 @@ package com.cptkagan.ecommerce.DTOs.responseDTO;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import com.cptkagan.ecommerce.models.Order;
-import com.cptkagan.ecommerce.models.OrderItem;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

@@ -25,10 +25,6 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.GetMapping;
 
-
-
-
-
 @RestController
 @RequestMapping("/api/seller")
 @PreAuthorize("hasRole('ROLE_SELLER')")
@@ -89,4 +85,8 @@ public class SellerController {
         return sellerService.salesReport(authentication);
     }
     
+    @GetMapping("/lowstock")
+    public ResponseEntity<?> lowStock(Authentication authentication) {
+        return sellerService.lowStock(authentication);
+    }
 }

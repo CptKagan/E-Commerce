@@ -12,6 +12,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.cptkagan.ecommerce.DTOs.requestDTO.CartRequest;
 import com.cptkagan.ecommerce.DTOs.requestDTO.OrderRequest;
 import com.cptkagan.ecommerce.services.BuyerService;
 import com.cptkagan.ecommerce.services.OrderService;
@@ -20,9 +21,10 @@ import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-
+import org.springframework.web.bind.annotation.PutMapping;
 
 
 @RestController
@@ -63,4 +65,30 @@ public class BuyerController {
     public ResponseEntity<?> cancelOrder(@PathVariable Long id, Authentication authentication){
         return buyerService.cancelOrder(id, authentication);
     }
+
+    @PostMapping("/cart/addproduct")
+    public ResponseEntity<?> addProductToCart(@Valid @RequestBody CartRequest cartRequest, Authentication authentication, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            Map<String, String> errors = bindingResult.getFieldErrors().stream()
+                .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
+            return ResponseEntity.badRequest().body(errors);
+        }
+        return buyerService.addProductToCart(cartRequest, authentication);
+    }
+
+    @GetMapping("/cart")
+    public ResponseEntity<?> getCart(Authentication authentication) {
+        return buyerService.getCart(authentication);
+    }
+    
+    @PutMapping("cart/{id}/{quantity}")
+    public ResponseEntity<?> updateCart(@PathVariable Long id, Authentication authentication, @PathVariable Integer quantity) {
+        return buyerService.updateCart(id, authentication, quantity);
+    }
+
+    @DeleteMapping("cart/{id}")
+    public ResponseEntity<?> deleteCart(@PathVariable Long id, Authentication authentication){
+        return buyerService.deleteCart(id, authentication);
+    }
+    
 }
