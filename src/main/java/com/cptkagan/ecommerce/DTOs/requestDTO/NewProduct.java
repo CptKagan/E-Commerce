@@ -33,4 +33,5 @@ public class NewProduct {
     @Size(min = 3, max = 20, message = "Category must be between 3 and 20 characters")
     private String category;
 
+    private int lowStockWarning = 5;
 }

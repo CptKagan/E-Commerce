@@ -1,5 +1,6 @@
 package com.cptkagan.ecommerce.services;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,17 +16,20 @@ import com.cptkagan.ecommerce.DTOs.requestDTO.BuyerRegisterRequest;
 import com.cptkagan.ecommerce.DTOs.requestDTO.CartRequest;
 import com.cptkagan.ecommerce.DTOs.responseDTO.CartResponse;
 import com.cptkagan.ecommerce.DTOs.responseDTO.OrderHistory;
+import com.cptkagan.ecommerce.DTOs.responseDTO.ProductResponse;
 import com.cptkagan.ecommerce.enums.OrderStatus;
 import com.cptkagan.ecommerce.models.Buyer;
 import com.cptkagan.ecommerce.models.Cart;
 import com.cptkagan.ecommerce.models.Order;
 import com.cptkagan.ecommerce.models.OrderItem;
 import com.cptkagan.ecommerce.models.Product;
+import com.cptkagan.ecommerce.models.Wishlist;
 import com.cptkagan.ecommerce.repositories.BuyerRepository;
 import com.cptkagan.ecommerce.repositories.CartRepository;
 import com.cptkagan.ecommerce.repositories.OrderItemRepository;
 import com.cptkagan.ecommerce.repositories.OrderRepository;
 import com.cptkagan.ecommerce.repositories.ProductRepository;
+import com.cptkagan.ecommerce.repositories.WishlistRepository;
 
 @Service
 public class BuyerService {
@@ -47,6 +51,9 @@ public class BuyerService {
 
     @Autowired
     private CartRepository cartRepository;
+
+    @Autowired
+    private WishlistRepository wishlistRepository;
 
 
     public ResponseEntity<?> registerBuyer(BuyerRegisterRequest buyerRegisterRequest) {
@@ -105,6 +112,7 @@ public class BuyerService {
         }
 
         orderItem.setStatus(OrderStatus.CANCELED);
+        orderItem.setUpdatedAt(LocalDateTime.now());
         orderItemRepository.save(orderItem);
         return ResponseEntity.ok("Order item cancelled successfully!");
     }
@@ -136,6 +144,7 @@ public class BuyerService {
         for(int i=0; i<order.getOrderItems().size(); i++){
             if(!order.getOrderItems().get(i).getStatus().equals(OrderStatus.SHIPPED) && !order.getOrderItems().get(i).getStatus().equals(OrderStatus.DELIVERED)){
                 order.getOrderItems().get(i).setStatus(OrderStatus.CANCELED);
+                order.getOrderItems().get(i).setUpdatedAt(LocalDateTime.now());
                 orderItemRepository.save(order.getOrderItems().get(i));
             }
         }
@@ -240,5 +249,63 @@ public class BuyerService {
 
         cartRepository.delete(cart);
         return ResponseEntity.ok("Cart item deleted successfully!");
+    }
+
+    public ResponseEntity<?> addProducttoWishlist(Long id, Authentication authentication) {
+        Buyer buyer = findByUserName(authentication.getName());
+        if(buyer == null){
+            return ResponseEntity.badRequest().body("User not found!");
+        }
+
+        Optional<Product> productOpt = productRepository.findById(id);
+        if(!productOpt.isPresent()){
+            return ResponseEntity.badRequest().body("Product not found!");
+        }
+
+        if(wishlistRepository.existsByBuyerIdAndProductId(buyer.getId(), id)){
+            return ResponseEntity.badRequest().body("Product already in wishlist!");
+        }
+
+        Wishlist wishlist = new Wishlist(buyer, productOpt.get());
+        wishlistRepository.save(wishlist);
+        return ResponseEntity.ok("Product added to wishlist successfully!");
+
+    }
+
+    public ResponseEntity<?> getWishlist(Authentication authentication) {
+        Buyer buyer = findByUserName(authentication.getName());
+        if(buyer == null){
+            return ResponseEntity.badRequest().body("User not found!");
+        }
+
+        List<Wishlist> wishlist = wishlistRepository.findAllByBuyerId(buyer.getId());
+        if(wishlist.isEmpty()){
+            return ResponseEntity.ok("Wishlist is empty!");
+        }
+
+        List<Product> products = wishlist.stream().map(Wishlist::getProduct).collect(Collectors.toList());
+        List<ProductResponse> productResponses = products.stream().map(ProductResponse::new).collect(Collectors.toList());
+
+        return ResponseEntity.ok(productResponses);
+    }
+
+    public ResponseEntity<?> deleteWishlistItem(Long id, Authentication authentication) {
+        Buyer buyer = findByUserName(authentication.getName());
+        if(buyer == null){
+            return ResponseEntity.badRequest().body("User not found!");
+        }
+
+        Optional<Wishlist> wishlistOpt = wishlistRepository.findByBuyerIdAndProductId(buyer.getId(), id);
+        if(!wishlistOpt.isPresent()){
+            return ResponseEntity.badRequest().body("Wishlist item not found!");
+        }
+
+        Wishlist wishlist = wishlistOpt.get();
+        if(!wishlist.getBuyer().getId().equals(buyer.getId())){
+            return ResponseEntity.badRequest().body("Wishlist item does not belong to the user!");
+        }
+
+        wishlistRepository.delete(wishlist);
+        return ResponseEntity.ok("Wishlist item deleted successfully!");
     }
 }

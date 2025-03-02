@@ -1,5 +1,7 @@
 package com.cptkagan.ecommerce.models;
 
+import java.time.LocalDateTime;
+
 import com.cptkagan.ecommerce.enums.OrderStatus;
 
 import jakarta.persistence.Entity;
@@ -36,10 +38,15 @@ public class OrderItem {
     @Enumerated(EnumType.STRING)
     private OrderStatus status; // STATUS UPDATE
 
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+
     public OrderItem(Order order, Product product, int quantity) {
         this.order = order;
         this.product = product;
         this.quantity = quantity;
+        this.createdAt = LocalDateTime.now();
         this.status = order.getStatus(); // STATUS UPDATE
     }
 }

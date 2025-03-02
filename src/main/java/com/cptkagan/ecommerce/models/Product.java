@@ -40,6 +40,8 @@ public class Product {
 
     private LocalDateTime updatedAt;
 
+    private int lowStockWarning = 5;
+
     @ManyToOne
     @JoinColumn(name = "seller_id", referencedColumnName = "id", nullable = false)
     @JsonBackReference
@@ -51,6 +53,7 @@ public class Product {
         this.price = dto.getPrice();
         this.stockQuantity = dto.getStockQuantity();
         this.category = dto.getCategory();
+        this.lowStockWarning = dto.getLowStockWarning();
         this.seller = seller;
     }
 }

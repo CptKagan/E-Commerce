@@ -40,7 +40,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             seller1.setFirstName("John");
             seller1.setLastName("Doe");
             seller1.setGender(true);
-            seller1.setEmail("seller1@example.com");
+            seller1.setEmail("mkagankayabasi@gmail.com");
             seller1.setUserName("seller1");
             seller1.setPassword(passwordEncoder.encode("password"));
             seller1.setRole(com.cptkagan.ecommerce.enums.UserRoles.ROLE_SELLER);
@@ -55,7 +55,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             seller2.setFirstName("Jane");
             seller2.setLastName("Smith");
             seller2.setGender(false);
-            seller2.setEmail("seller2@example.com");
+            seller2.setEmail("flowerybeggar@gmail.com");
             seller2.setUserName("seller2");
             seller2.setPassword(passwordEncoder.encode("password"));
             seller2.setRole(com.cptkagan.ecommerce.enums.UserRoles.ROLE_SELLER);
@@ -98,7 +98,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             buyer1.setFirstName("Alice");
             buyer1.setLastName("Johnson");
             buyer1.setGender(false);
-            buyer1.setEmail("buyer1@example.com");
+            buyer1.setEmail("mkagankayabasi@gmail.com");
             buyer1.setUserName("buyer1");
             buyer1.setPassword(passwordEncoder.encode("password"));
             buyer1.setRole(com.cptkagan.ecommerce.enums.UserRoles.ROLE_BUYER);
@@ -110,7 +110,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             buyer2.setFirstName("Bob");
             buyer2.setLastName("Williams");
             buyer2.setGender(true);
-            buyer2.setEmail("buyer2@example.com");
+            buyer2.setEmail("flowerybeggar@gmail.com");
             buyer2.setUserName("buyer2");
             buyer2.setPassword(passwordEncoder.encode("password"));
             buyer2.setRole(com.cptkagan.ecommerce.enums.UserRoles.ROLE_BUYER);

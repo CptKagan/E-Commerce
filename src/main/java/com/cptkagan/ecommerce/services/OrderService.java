@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +19,7 @@ import com.cptkagan.ecommerce.models.Cart;
 import com.cptkagan.ecommerce.models.Order;
 import com.cptkagan.ecommerce.models.OrderItem;
 import com.cptkagan.ecommerce.models.Product;
+import com.cptkagan.ecommerce.models.Seller;
 import com.cptkagan.ecommerce.repositories.CartRepository;
 import com.cptkagan.ecommerce.repositories.OrderRepository;
 import com.cptkagan.ecommerce.repositories.ProductRepository;
@@ -28,7 +28,6 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.model.PaymentMethod;
 import com.stripe.param.PaymentIntentCreateParams;
-import com.stripe.param.PaymentMethodCreateParams;
 
 @Service
 public class OrderService {
@@ -43,6 +42,9 @@ public class OrderService {
 
     @Autowired
     private CartRepository cartRepository;
+
+    @Autowired
+    private EmailService emailService;
 
     @Value("${stripe.secret.key}")
     private String stripeSecretKey;
@@ -111,14 +113,24 @@ public class OrderService {
         orderRepository.save(order);
 
         List<OrderItem> orderItems = new ArrayList<>();
+        List<Long> notifiedSellers = new ArrayList<>();
         // UPDATE STOCKS, STORE ORDER ITEMS
         for(Cart cartItems : cart){
             Product product = cartItems.getProduct();
             product.setStockQuantity(product.getStockQuantity() - cartItems.getQuantity());
             productRepository.save(product);
+            if(product.getStockQuantity() < product.getLowStockWarning()){
+                emailService.sendLowStockEmail(product.getSeller().getEmail(), product.getName(), product.getStockQuantity());
+            }
 
             OrderItem orderItem = new OrderItem(order, product, cartItems.getQuantity());
             orderItems.add(orderItem);
+
+            // Notify Seller
+            if(!notifiedSellers.contains(product.getSeller().getId())){
+                emailService.sendOrderItemNotifyEmail(product.getSeller().getEmail(), product.getName(), cartItems.getQuantity(), product.getPrice()*cartItems.getQuantity());
+                notifiedSellers.add(product.getSeller().getId());
+            }
         }
 
         // UPDATE ORDER
@@ -128,20 +140,24 @@ public class OrderService {
 
         cartRepository.deleteAll(cart);
 
+        // SEND EMAIL
+        emailService.sendOrderPlacedEmail(buyer.getEmail(), order.getId());
+
         return ResponseEntity.ok("Order placed successfully");
     }
 
-    public void checkOrderStatus (Order order){
+    public boolean checkOrderStatus (Order order){
         if(order.getOrderItems().isEmpty()){
-            return;
+            return false;
         }
         OrderStatus firstStatus = order.getOrderItems().get(0).getStatus();
-        for(int i = 1; i<order.getOrderItems().size()-1; i++){
+        for(int i = 1; i<order.getOrderItems().size(); i++){
             if(order.getOrderItems().get(i).getStatus() != firstStatus){
-                return;
+                return false;
             }
         }
         order.setStatus(firstStatus);
         orderRepository.save(order);
+        return true;
     }
 }

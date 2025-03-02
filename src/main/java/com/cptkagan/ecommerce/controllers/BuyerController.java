@@ -90,5 +90,20 @@ public class BuyerController {
     public ResponseEntity<?> deleteCart(@PathVariable Long id, Authentication authentication){
         return buyerService.deleteCart(id, authentication);
     }
+
+    @PostMapping("/wishlist/addproduct/{id}")
+    public ResponseEntity<?> addProducttoWishlsit(@PathVariable Long id, Authentication authentication){
+        return buyerService.addProducttoWishlist(id, authentication);
+    }
+
+    @GetMapping("/wishlist")
+    public ResponseEntity<?> getWishlist(Authentication authentication){
+        return buyerService.getWishlist(authentication);
+    }
+
+    @DeleteMapping("/wishlist/{id}")
+    public ResponseEntity<?> deleteWishlistItem(@PathVariable Long id, Authentication authentication){
+        return buyerService.deleteWishlistItem(id, authentication);
+    }
     
 }

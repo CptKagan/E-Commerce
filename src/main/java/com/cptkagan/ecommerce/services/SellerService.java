@@ -29,9 +29,11 @@ import com.cptkagan.ecommerce.models.Order;
 import com.cptkagan.ecommerce.models.OrderItem;
 import com.cptkagan.ecommerce.models.Product;
 import com.cptkagan.ecommerce.models.Seller;
+import com.cptkagan.ecommerce.models.Wishlist;
 import com.cptkagan.ecommerce.repositories.OrderItemRepository;
 import com.cptkagan.ecommerce.repositories.ProductRepository;
 import com.cptkagan.ecommerce.repositories.SellerRepository;
+import com.cptkagan.ecommerce.repositories.WishlistRepository;
 
 @Service
 public class SellerService {
@@ -50,6 +52,12 @@ public class SellerService {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private WishlistRepository wishlistRepository;
 
     public ResponseEntity<?> registerSeller(SellerRegisterRequest sellerRegisterRequest) {
         if (sellerRepository.existsByUserName(sellerRegisterRequest.getUserName())) {
@@ -108,6 +116,9 @@ public class SellerService {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("You are not authorized to update this product");
         }
 
+        double oldPrice = product.getPrice();
+        int oldStockQuantity = product.getStockQuantity();
+
         if(updateProduct.getName() != null){
             product.setName(updateProduct.getName());
         }
@@ -130,6 +141,20 @@ public class SellerService {
 
         product.setUpdatedAt(LocalDateTime.now());
         productRepository.save(product);
+
+        List<Wishlist> wishlists = wishlistRepository.findByProductId(id);
+        boolean priceDropped = (((oldPrice - product.getPrice()) / oldPrice) * 100) >= 10.0;
+        boolean stockAdded = oldStockQuantity == 0 || product.getStockQuantity() - oldStockQuantity >= 10;
+
+        for(Wishlist wishlist : wishlists){
+            if(priceDropped){
+                emailService.sendDiscountEmail(wishlist.getBuyer().getEmail(), product.getName(), oldPrice, product.getPrice(), product.getId());
+            }
+            if(stockAdded){
+                emailService.sendNewStockEmail(wishlist.getBuyer().getEmail(), product.getName(), product.getStockQuantity(), product.getId());
+            }
+        }
+        
         return ResponseEntity.ok("Product updated successfully");
     }
 
@@ -203,28 +228,36 @@ public class SellerService {
             return ResponseEntity.badRequest().body("Order is already delivered or cancelled, cannot be updated!");
         }
 
-        if(status == 1){
-            orderItem.setStatus(OrderStatus.PENDING);
-        }
-        else if(status == 2){
-            orderItem.setStatus(OrderStatus.PREPARING);
-        }
-        else if(status == 3){
-            orderItem.setStatus(OrderStatus.SHIPPED);
-        }
-        else if(status == 4){
-            orderItem.setStatus(OrderStatus.DELIVERED);
-        }
-        else if(status == 5){
-            orderItem.setStatus(OrderStatus.CANCELED);
-        }
-        else{
-            return ResponseEntity.badRequest().body("Invalid status!");
+        // Prevent updating to same status
+        if(orderItem.getStatus().ordinal() == status){
+            return ResponseEntity.badRequest().body("Order is already in this status!");
         }
 
+        switch(status){
+            case 0:
+                orderItem.setStatus(OrderStatus.PENDING);
+                break;
+            case 1:
+                orderItem.setStatus(OrderStatus.PREPARING);
+                break;
+            case 2:
+                orderItem.setStatus(OrderStatus.SHIPPED);
+                break;
+            case 3:
+                orderItem.setStatus(OrderStatus.DELIVERED);
+                break;
+            case 4:
+                orderItem.setStatus(OrderStatus.CANCELED);
+                break;
+            default:
+                return ResponseEntity.badRequest().body("Invalid status!");
+        }
+
+        orderItem.setUpdatedAt(LocalDateTime.now());
         orderItemRepository.save(orderItem);
-
-        orderService.checkOrderStatus(orderItem.getOrder());
+        if(orderService.checkOrderStatus(orderItem.getOrder())){
+            emailService.sendOrderStatusEmail(orderItem.getOrder().getBuyer().getEmail(), orderItem.getOrder().getId(), orderItem.getStatus().toString(), orderItem.getUpdatedAt());
+        }
 
         return ResponseEntity.ok("Order Status updated Successfully!");
     }
