@@ -46,6 +46,9 @@ public class OrderService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private ReceiptService receiptService;
+
     @Value("${stripe.secret.key}")
     private String stripeSecretKey;
 
@@ -126,7 +129,7 @@ public class OrderService {
             OrderItem orderItem = new OrderItem(order, product, cartItems.getQuantity());
             orderItems.add(orderItem);
 
-            // Notify Seller
+            // Notify Seller, this should change to all orderItems in one mail, not only the first item that appears.
             if(!notifiedSellers.contains(product.getSeller().getId())){
                 emailService.sendOrderItemNotifyEmail(product.getSeller().getEmail(), product.getName(), cartItems.getQuantity(), product.getPrice()*cartItems.getQuantity());
                 notifiedSellers.add(product.getSeller().getId());
@@ -141,7 +144,8 @@ public class OrderService {
         cartRepository.deleteAll(cart);
 
         // SEND EMAIL
-        emailService.sendOrderPlacedEmail(buyer.getEmail(), order.getId());
+        String invoicePath = receiptService.generateInvoice(order);
+        emailService.sendInvoiceEmail(order.getBuyer().getEmail(), invoicePath, order.getId());
 
         return ResponseEntity.ok("Order placed successfully");
     }

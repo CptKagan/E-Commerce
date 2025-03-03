@@ -50,6 +50,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             seller1.setTaxNumber("TAX12345");
             seller1.setCompanyDescription("Best electronics in town.");
             seller1.setCreatedAt(LocalDateTime.now());
+            seller1.setIsActivated(true);
 
             Seller seller2 = new Seller();
             seller2.setFirstName("Jane");
@@ -65,6 +66,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             seller2.setTaxNumber("TAX67890");
             seller2.setCompanyDescription("Quality office supplies.");
             seller2.setCreatedAt(LocalDateTime.now());
+            seller2.setIsActivated(true);
 
             sellerRepository.saveAll(List.of(seller1, seller2));
 
@@ -105,6 +107,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             buyer1.setPhoneNumber("5551112222");
             buyer1.setAddress("789 Oak St");
             buyer1.setCreatedAt(LocalDateTime.now());
+            buyer1.setIsActivated(true);
 
             Buyer buyer2 = new Buyer();
             buyer2.setFirstName("Bob");
@@ -117,6 +120,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             buyer2.setPhoneNumber("5553334444");
             buyer2.setAddress("321 Pine St");
             buyer2.setCreatedAt(LocalDateTime.now());
+            buyer2.setIsActivated(true);
 
             buyerRepository.saveAll(List.of(buyer1, buyer2));
 

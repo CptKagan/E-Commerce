@@ -41,6 +41,10 @@ public class AuthService {
             throw new RuntimeException("Invalid username or password");
         }
 
+        if(!user.getIsActivated()){
+            throw new RuntimeException("Account is not verified! Check your email!");
+        }
+
         // Generate token with username and role
         return jwtTokenUtil.generateToken(userName, user.getRole().name());
         

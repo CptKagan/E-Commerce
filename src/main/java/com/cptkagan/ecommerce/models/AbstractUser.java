@@ -50,6 +50,8 @@ public abstract class AbstractUser {
     @Enumerated(EnumType.STRING)
     private UserRoles role;
 
+    Boolean isActivated;
+
 
     public AbstractUser(String firstName, String lastName, Boolean gender, String email,
                         String userName, String password, UserRoles role, String phoneNumber, String address) {
@@ -68,5 +70,7 @@ public abstract class AbstractUser {
         else{
             this.address = "";
         }
+
+        this.isActivated = false;
     }
 }

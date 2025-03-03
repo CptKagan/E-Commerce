@@ -1,12 +1,17 @@
 package com.cptkagan.ecommerce.services;
 
+import java.io.File;
 import java.time.LocalDateTime;
 
 import org.apache.logging.log4j.message.SimpleMessage;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+
+import jakarta.mail.internet.MimeMessage;
 
 @Service
 public class EmailService {
@@ -64,5 +69,32 @@ public class EmailService {
         message.setSubject("New Stock Alert on Product: " + name);
         message.setText("The product " + name + "with id: " + id + " has been restocked. New stock quantity: " + stockQuantity);
         javaMailSender.send(message);
+    }
+
+    public void sendVerificationEmail(String to, String token) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject("Registration Completion and Email Verification");
+        message.setText("Please click the link below to verify your email address and complete your registration: " + token);
+        javaMailSender.send(message);
+    }
+
+    public void sendInvoiceEmail(String to, String filePath, Long orderId){
+        try{
+            MimeMessage message = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setTo(to);
+            helper.setSubject("Your Invoice for Order #" + orderId);
+            helper.setText("Dear Customer,\n\nPlease find your invoice attached.\n\nThank you fr your purchase!");
+
+            // Attach PDF
+            FileSystemResource file = new FileSystemResource(new File(filePath));
+            helper.addAttachment("Invoice_Order_" + orderId + ".pdf", file);
+
+            javaMailSender.send(message);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
     }
 }

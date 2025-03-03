@@ -30,6 +30,7 @@ import com.cptkagan.ecommerce.repositories.OrderItemRepository;
 import com.cptkagan.ecommerce.repositories.OrderRepository;
 import com.cptkagan.ecommerce.repositories.ProductRepository;
 import com.cptkagan.ecommerce.repositories.WishlistRepository;
+import java.util.UUID;
 
 @Service
 public class BuyerService {
@@ -55,6 +56,9 @@ public class BuyerService {
     @Autowired
     private WishlistRepository wishlistRepository;
 
+    @Autowired
+    private EmailVerificationService emailVerificationService;
+
 
     public ResponseEntity<?> registerBuyer(BuyerRegisterRequest buyerRegisterRequest) {
         if(buyerRepository.existsByUserName(buyerRegisterRequest.getUserName())){
@@ -67,7 +71,14 @@ public class BuyerService {
 
         Buyer buyer = new Buyer(buyerRegisterRequest, passwordEncoder.encode(buyerRegisterRequest.getPassword()));
         buyerRepository.save(buyer);
-        return ResponseEntity.ok("User registered successfully");
+
+        String verificationToken = UUID.randomUUID().toString();
+
+        emailVerificationService.save(verificationToken, buyer);
+
+        emailVerificationService.sendVerificationEmail(buyerRegisterRequest.getEmail(), verificationToken);
+
+        return ResponseEntity.ok("User registered successfully, please check your email to verify your account!");
     }
 
     public Buyer findByUserName (String userName){
@@ -307,5 +318,16 @@ public class BuyerService {
 
         wishlistRepository.delete(wishlist);
         return ResponseEntity.ok("Wishlist item deleted successfully!");
+    }
+
+    public ResponseEntity<?> verifyBuyer(String token) {
+        Optional<Buyer> buyerOpt = emailVerificationService.verifyBuyer(token);
+        if(buyerOpt.isEmpty()){
+            return ResponseEntity.badRequest().body("Invalid/expired token or account is already verified!");
+        }
+
+        Buyer buyer = buyerOpt.get();
+        buyerRepository.save(buyer);
+        return ResponseEntity.ok("Account verified successfully!");
     }
 }

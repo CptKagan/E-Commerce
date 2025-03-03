@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -51,6 +52,12 @@ public class AccountController {
             return ResponseEntity.badRequest().body("User could not be registered");
         }
     }
+
+    @PostMapping("/verify/buyer/{token}")
+    public ResponseEntity<?> verifyBuyer(@PathVariable String token) {
+        return buyerService.verifyBuyer(token);
+    }
+    
 
     @PostMapping("/register/seller")
     public ResponseEntity<?> registerSeller(@Valid @RequestBody SellerRegisterRequest sellerRegisterRequest,
