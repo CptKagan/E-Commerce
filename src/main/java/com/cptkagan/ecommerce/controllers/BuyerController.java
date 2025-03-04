@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 @RequestMapping("/api/buyer")
 @PreAuthorize("hasRole('ROLE_BUYER')") // WHY DOES IT WORK? IT MAKES IT ROLE_ROLE_BUYER???
                                        // IT WORKS CUZ SECURITY AND PREAUTHORIZE WORKS DIFFERENTLY.
-                                       // IT CHECKS IF THE ROLE HAS "ROLE_" IN IT.
+                                       // IT CHECKS IF THE ROLE HAS "ROLE_" IN IT. ????
 public class BuyerController {
 
     @Autowired
