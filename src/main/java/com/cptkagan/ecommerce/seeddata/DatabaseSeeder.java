@@ -97,8 +97,8 @@ public class DatabaseSeeder implements CommandLineRunner {
     private void seedBuyers() {
         if (buyerRepository.count() == 0) {
             Buyer buyer1 = new Buyer();
-            buyer1.setFirstName("Alice");
-            buyer1.setLastName("Johnson");
+            buyer1.setFirstName("Yasin");
+            buyer1.setLastName("Yılmaz");
             buyer1.setGender(false);
             buyer1.setEmail("mkagankayabasi@gmail.com");
             buyer1.setUserName("buyer1");

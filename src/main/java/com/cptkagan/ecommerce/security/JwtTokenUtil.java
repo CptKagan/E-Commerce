@@ -2,6 +2,7 @@ package com.cptkagan.ecommerce.security;
 
 import java.util.Date;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.Claims;
@@ -10,7 +11,8 @@ import io.jsonwebtoken.SignatureAlgorithm;
 
 @Component
 public class JwtTokenUtil {
-    private final String secret = "3viXNPoEKeapyXbHoTnL+/oDjbun6XC3gAu8PKbIt98=";
+    @Value("${jwt.secret}")
+    private String secret;
     private final long expiration = 36000000;
 
     public String generateToken(String userName, String role){
