@@ -7,11 +7,14 @@ import com.cptkagan.ecommerce.DTOs.requestDTO.LoginRequest;
 import com.cptkagan.ecommerce.DTOs.requestDTO.SellerRegisterRequest;
 import com.cptkagan.ecommerce.services.BuyerService;
 import com.cptkagan.ecommerce.services.SellerService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import com.cptkagan.ecommerce.services.AuthService;
 
 import jakarta.validation.Valid;
 
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -38,6 +41,20 @@ public class AccountController {
     @Autowired
     private SellerService sellerService;
 
+    private ResponseEntity<?> handleBindingErrors(BindingResult bindingResult){
+        if (bindingResult.hasErrors()) {
+            Map<String, String> errors = bindingResult.getFieldErrors().stream()
+                .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
+            return ResponseEntity.badRequest().body(errors);
+        }
+        return null;
+    }
+
+    @Operation(summary = "Register endpoint for buyers",
+               responses = {
+                    @ApiResponse(responseCode = "200", description = "User registered successfully, please check your email to verify your account!"),
+                    @ApiResponse(responseCode = "400", description = "Username or Email is already taken")
+               })
     @PostMapping("/register/buyer")
     public ResponseEntity<?> registerBuyer(@Valid @RequestBody BuyerRegisterRequest buyerRegisterRequest,
             BindingResult bindingResult) {
@@ -53,12 +70,32 @@ public class AccountController {
         }
     }
 
+    @Operation(summary = "Verifying Email with token",
+               responses = {
+                    @ApiResponse(responseCode = "200", description = "Account verified successfully!"),
+                    @ApiResponse(responseCode = "400", description = "Invalid/expired token or account is already verified!")
+               })
     @PostMapping("/verify/buyer/{token}")
     public ResponseEntity<?> verifyBuyer(@PathVariable String token) {
         return buyerService.verifyBuyer(token);
     }
-    
 
+
+    @Operation(summary = "Verifying Email with token",
+               responses = {
+                    @ApiResponse(responseCode = "200", description = "Account verified successfully!"),
+                    @ApiResponse(responseCode = "400", description = "Invalid/expired token or account is already verified!")
+               })
+    @PostMapping("/verify/seller/{token}")
+    public ResponseEntity<?> verifySeller(@PathVariable String token) {
+        return sellerService.verifySeller(token);
+    }
+    
+    @Operation(summary = "Register endpoint for sellers",
+               responses = {
+                    @ApiResponse(responseCode = "200", description = "User registered successfully"),
+                    @ApiResponse(responseCode = "400", description = "Username or Email is already taken")
+               })
     @PostMapping("/register/seller")
     public ResponseEntity<?> registerSeller(@Valid @RequestBody SellerRegisterRequest sellerRegisterRequest,
             BindingResult bindingResult) {
@@ -85,12 +122,9 @@ public class AccountController {
     }
 
     private ResponseEntity<?> handleLogin(LoginRequest loginRequest, BindingResult bindingResult, String userType) {
-        if (bindingResult.hasErrors()) {
-            Map<String, List<String>> errors = bindingResult.getFieldErrors().stream()
-                    .collect(Collectors.groupingBy(
-                            FieldError::getField,
-                            Collectors.mapping(FieldError::getDefaultMessage, Collectors.toList())));
-            return ResponseEntity.badRequest().body(errors);
+        ResponseEntity<?> errorResponse = handleBindingErrors(bindingResult);
+        if(errorResponse != null){
+            return errorResponse;
         }
         try {
             String token = authService.login(loginRequest.getUserName(), loginRequest.getPassword(), userType);
@@ -98,6 +132,10 @@ public class AccountController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
+    }
 
+    @PostMapping("/login/admin")
+    public ResponseEntity<?> adminLogin(@Valid @RequestBody LoginRequest loginRequest, BindingResult bindingResult) {
+        return handleLogin(loginRequest, bindingResult, "ADMIN");
     }
 }

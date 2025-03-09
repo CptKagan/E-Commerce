@@ -18,7 +18,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Verification {
+public class BuyerVerification {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;

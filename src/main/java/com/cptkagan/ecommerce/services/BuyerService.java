@@ -74,7 +74,7 @@ public class BuyerService {
 
         String verificationToken = UUID.randomUUID().toString();
 
-        emailVerificationService.save(verificationToken, buyer);
+        emailVerificationService.saveBuyerToken(verificationToken, buyer);
 
         emailVerificationService.sendVerificationEmail(buyerRegisterRequest.getEmail(), verificationToken);
 

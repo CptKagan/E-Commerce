@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.cptkagan.ecommerce.DTOs.requestDTO.OrderRequest;
 import com.cptkagan.ecommerce.enums.OrderStatus;
@@ -19,7 +20,6 @@ import com.cptkagan.ecommerce.models.Cart;
 import com.cptkagan.ecommerce.models.Order;
 import com.cptkagan.ecommerce.models.OrderItem;
 import com.cptkagan.ecommerce.models.Product;
-import com.cptkagan.ecommerce.models.Seller;
 import com.cptkagan.ecommerce.repositories.CartRepository;
 import com.cptkagan.ecommerce.repositories.OrderRepository;
 import com.cptkagan.ecommerce.repositories.ProductRepository;
@@ -52,6 +52,7 @@ public class OrderService {
     @Value("${stripe.secret.key}")
     private String stripeSecretKey;
 
+    @Transactional
     public ResponseEntity<?> placeOrder(OrderRequest orderRequest, Authentication authentication) {
         Buyer buyer = buyerService.findByUserName(authentication.getName());
         if(buyer == null){

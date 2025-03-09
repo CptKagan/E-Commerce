@@ -30,6 +30,8 @@ public class Seller extends AbstractUser{
     @JsonManagedReference
     private List<Product> products;
 
+    private Boolean isApprovedByAdmin = false;
+
     public Seller(SellerRegisterRequest dto, String password) {
         super(dto.getFirstName(), dto.getLastName(), dto.getGender(),
               dto.getEmail(), dto.getUserName(), password, UserRoles.ROLE_SELLER, dto.getPhoneNumber(),
@@ -37,6 +39,11 @@ public class Seller extends AbstractUser{
               this.companyDescription = dto.getCompanyDescription();
               this.companyName = dto.getCompanyName();
               this.taxNumber = dto.getTaxNumber();
+    }
+
+    @Override
+    public Boolean isEligibleForLogin(){ // Check if account is Activated & Approved by an Admin or not (Login Workflow)
+        return this.getIsActivated() && this.getIsApprovedByAdmin();
     }
 
 }

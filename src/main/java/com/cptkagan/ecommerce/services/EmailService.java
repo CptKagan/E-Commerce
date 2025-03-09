@@ -3,7 +3,6 @@ package com.cptkagan.ecommerce.services;
 import java.io.File;
 import java.time.LocalDateTime;
 
-import org.apache.logging.log4j.message.SimpleMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.mail.SimpleMailMessage;
@@ -96,5 +95,13 @@ public class EmailService {
         } catch (Exception e){
             e.printStackTrace();
         }
+    }
+
+    public void sendAccountApprovedEmail(String to) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject("Your SELLER Account Has Been Approved");
+        message.setText("Your account that waiting for an approval, is approved and ready to login. Thanks for choosing CptKagan E-Commerce!");
+        javaMailSender.send(message);
     }
 }

@@ -1,6 +1,8 @@
 package com.cptkagan.ecommerce.seeddata;
 
+import com.cptkagan.ecommerce.enums.UserRoles;
 import com.cptkagan.ecommerce.models.*;
+import com.cptkagan.ecommerce.repositories.AdminRepository;
 import com.cptkagan.ecommerce.repositories.BuyerRepository;
 import com.cptkagan.ecommerce.repositories.ProductRepository;
 import com.cptkagan.ecommerce.repositories.SellerRepository;
@@ -19,19 +21,22 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final BuyerRepository buyerRepository;
     private final ProductRepository productRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AdminRepository adminRepository;
 
     public DatabaseSeeder(SellerRepository sellerRepository, BuyerRepository buyerRepository, 
-                          ProductRepository productRepository, PasswordEncoder passwordEncoder) {
+                          ProductRepository productRepository, PasswordEncoder passwordEncoder, AdminRepository adminRepository) {
         this.sellerRepository = sellerRepository;
         this.buyerRepository = buyerRepository;
         this.productRepository = productRepository;
         this.passwordEncoder = passwordEncoder;
+        this.adminRepository = adminRepository;
     }
 
     @Override
     public void run(String... args) {
         seedSellersAndProducts();
         seedBuyers();
+        seedAdmins();
     }
 
     private void seedSellersAndProducts() {
@@ -66,7 +71,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             seller2.setTaxNumber("TAX67890");
             seller2.setCompanyDescription("Quality office supplies.");
             seller2.setCreatedAt(LocalDateTime.now());
-            seller2.setIsActivated(true);
+            // seller2.setIsActivated(true);
 
             sellerRepository.saveAll(List.of(seller1, seller2));
 
@@ -125,6 +130,40 @@ public class DatabaseSeeder implements CommandLineRunner {
             buyerRepository.saveAll(List.of(buyer1, buyer2));
 
             System.out.println("Buyers seeded.");
+        }
+    }
+
+    private void seedAdmins(){
+        if(adminRepository.count() == 0){
+            Admin admin1 = new Admin();
+            admin1.setFirstName("Admin1");
+            admin1.setLastName("Admin1");
+            admin1.setGender(true);
+            admin1.setEmail("mkagankayabasi3@gmail.com");
+            admin1.setUserName("admin1");
+            admin1.setPassword(passwordEncoder.encode("password"));
+            admin1.setRole(UserRoles.ROLE_ADMIN);
+            admin1.setPhoneNumber("5444235336");
+            admin1.setAddress("321 Pine St.");
+            admin1.setCreatedAt(LocalDateTime.now());
+            admin1.setIsActivated(true);
+
+            Admin admin2 = new Admin();
+            admin2.setFirstName("Admin2");
+            admin2.setLastName("Admin2");
+            admin2.setGender(true);
+            admin2.setEmail("oyunlaraverbunu3152@gmail.com");
+            admin2.setUserName("admin2");
+            admin2.setPassword(passwordEncoder.encode("password"));
+            admin2.setRole(UserRoles.ROLE_ADMIN);
+            admin2.setPhoneNumber("5444235336");
+            admin2.setAddress("321 Pine St.");
+            admin2.setCreatedAt(LocalDateTime.now());
+            admin2.setIsActivated(true);
+
+            adminRepository.saveAll(List.of(admin1, admin2));
+
+            System.out.println("Admins are seeded.");
         }
     }
 }

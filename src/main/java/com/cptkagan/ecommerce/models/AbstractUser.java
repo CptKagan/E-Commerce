@@ -50,7 +50,7 @@ public abstract class AbstractUser {
     @Enumerated(EnumType.STRING)
     private UserRoles role;
 
-    Boolean isActivated;
+    Boolean isActivated = false;
 
 
     public AbstractUser(String firstName, String lastName, Boolean gender, String email,
@@ -70,7 +70,9 @@ public abstract class AbstractUser {
         else{
             this.address = "";
         }
+    }
 
-        this.isActivated = false;
+    public Boolean isEligibleForLogin(){ // Check if account is Activated or not (Login Workflow)
+        return this.getIsActivated();
     }
 }

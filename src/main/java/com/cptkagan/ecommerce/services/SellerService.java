@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.cptkagan.ecommerce.DTOs.requestDTO.NewProduct;
 import com.cptkagan.ecommerce.DTOs.requestDTO.SellerRegisterRequest;
@@ -59,6 +61,17 @@ public class SellerService {
     @Autowired
     private WishlistRepository wishlistRepository;
 
+    @Autowired
+    private EmailVerificationService emailVerificationService;
+
+    public Seller findById(Long id){
+        Optional<Seller> sellerOpt = sellerRepository.findById(id);
+        if(sellerOpt.isPresent()){
+            return sellerOpt.get();
+        }
+        return null;
+    }
+
     public ResponseEntity<?> registerSeller(SellerRegisterRequest sellerRegisterRequest) {
         if (sellerRepository.existsByUserName(sellerRegisterRequest.getUserName())) {
             return ResponseEntity.badRequest().body("Username is already taken");
@@ -70,7 +83,14 @@ public class SellerService {
 
         Seller seller = new Seller(sellerRegisterRequest, passwordEncoder.encode(sellerRegisterRequest.getPassword()));
         sellerRepository.save(seller);
-        return ResponseEntity.ok("User registered successfully");
+
+        String verification = UUID.randomUUID().toString();
+
+        emailVerificationService.saveSellerToken(verification, seller);
+
+        emailVerificationService.sendVerificationEmail(sellerRegisterRequest.getEmail(), verification);
+
+        return ResponseEntity.ok("User registered successfully, please check your email to verify your account!");
     }
 
     public Seller findByUserName(String userName) {
@@ -343,5 +363,17 @@ public class SellerService {
         List<LowStockWarning> lowStockWarnings = lowStockProducts.stream().map(LowStockWarning::new).collect(Collectors.toList());
 
         return ResponseEntity.ok(lowStockWarnings);
+    }
+
+    @Transactional
+    public ResponseEntity<?> verifySeller(String token) {
+        Optional<Seller> sellerOpt = emailVerificationService.verifySeller(token);
+        if(!sellerOpt.isPresent()){
+            return ResponseEntity.badRequest().body("Invalid/expired token or account is already verified!");
+        }
+
+        Seller seller = sellerOpt.get();
+        sellerRepository.save(seller);
+        return ResponseEntity.ok("Account verified successfully! Please wait for your account to get reviewed and approved by a moderator.");
     }
 }
