@@ -58,10 +58,9 @@ public class AccountController {
     @PostMapping("/register/buyer")
     public ResponseEntity<?> registerBuyer(@Valid @RequestBody BuyerRegisterRequest buyerRegisterRequest,
             BindingResult bindingResult) {
-        if (bindingResult.hasErrors()) {
-            Map<String, String> errors = bindingResult.getFieldErrors().stream()
-                .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
-            return ResponseEntity.badRequest().body(errors);
+        ResponseEntity<?> errorResponse = handleBindingErrors(bindingResult);
+        if(errorResponse != null){
+            return errorResponse;
         }
         try {
             return buyerService.registerBuyer(buyerRegisterRequest);
@@ -99,10 +98,9 @@ public class AccountController {
     @PostMapping("/register/seller")
     public ResponseEntity<?> registerSeller(@Valid @RequestBody SellerRegisterRequest sellerRegisterRequest,
             BindingResult bindingResult) {
-        if (bindingResult.hasErrors()) {
-            Map<String, String> errors = bindingResult.getFieldErrors().stream()
-                .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
-            return ResponseEntity.badRequest().body(errors);
+        ResponseEntity<?> errorResponse = handleBindingErrors(bindingResult);
+        if(errorResponse != null){
+            return errorResponse;
         }
         try {
             return sellerService.registerSeller(sellerRegisterRequest);

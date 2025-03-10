@@ -31,5 +31,16 @@ public class AdminController {
     public ResponseEntity<?> approveSeller(@PathVariable Long id, Authentication authentication) {
         return adminService.approveSeller(id, authentication);
     }
+
+    @PostMapping("/reject/{id}")
+    public ResponseEntity<?> rejectSeller(@PathVariable Long id, Authentication authentication) {
+        return adminService.rejectSeller(id, authentication);
+    }
+    
+    @PostMapping("/approverejected/{id}")
+    public ResponseEntity<?> approveRejectedSeller(@PathVariable Long id, Authentication authentication) {
+        return adminService.approveRejectedSeller(id, authentication);
+    }
+    
     
 }

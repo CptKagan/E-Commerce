@@ -30,7 +30,7 @@ public class Seller extends AbstractUser{
     @JsonManagedReference
     private List<Product> products;
 
-    private Boolean isApprovedByAdmin = false;
+    private Boolean isApprovedByAdmin = null; // Null is waiting for approval, true is approved, false is rejected.
 
     public Seller(SellerRegisterRequest dto, String password) {
         super(dto.getFirstName(), dto.getLastName(), dto.getGender(),
@@ -43,7 +43,7 @@ public class Seller extends AbstractUser{
 
     @Override
     public Boolean isEligibleForLogin(){ // Check if account is Activated & Approved by an Admin or not (Login Workflow)
-        return this.getIsActivated() && this.getIsApprovedByAdmin();
+        return this.getIsActivated() && Boolean.TRUE.equals(this.getIsApprovedByAdmin());
     }
 
 }

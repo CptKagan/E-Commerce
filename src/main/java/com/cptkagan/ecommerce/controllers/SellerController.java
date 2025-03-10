@@ -33,21 +33,20 @@ public class SellerController {
     @Autowired
     private SellerService sellerService;
 
-    // public ResponseEntity<?> bindingReturn(BindingResult bindingResult) {
-    //     if (bindingResult.hasErrors()) {
-    //         Map<String, String> errors = bindingResult.getFieldErrors().stream()
-    //             .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
-    //         return ResponseEntity.badRequest().body(errors);
-    //     }
-    //     return null;
-    // }
-
-    @PostMapping("/addproduct")
-    public ResponseEntity<?> addProduct(@Valid @RequestBody NewProduct newProduct, BindingResult bindingResult, Authentication authentication) {
+    private ResponseEntity<?> handleBindingErrors(BindingResult bindingResult){
         if (bindingResult.hasErrors()) {
             Map<String, String> errors = bindingResult.getFieldErrors().stream()
                 .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
             return ResponseEntity.badRequest().body(errors);
+        }
+        return null;
+    }
+
+    @PostMapping("/addproduct")
+    public ResponseEntity<?> addProduct(@Valid @RequestBody NewProduct newProduct, BindingResult bindingResult, Authentication authentication) {
+        ResponseEntity<?> errorResponse = handleBindingErrors(bindingResult);
+        if(errorResponse != null){
+            return errorResponse;
         }
 
         return sellerService.addProduct(newProduct, authentication);
@@ -56,11 +55,10 @@ public class SellerController {
     @PutMapping("products/{id}")
     public ResponseEntity<?> updateProduct(@Valid @RequestBody UpdateProduct updateProduct, @PathVariable Long id,
                                 Authentication authentication, BindingResult bindingResult) {
-        if (bindingResult.hasErrors()) {
-            Map<String, String> errors = bindingResult.getFieldErrors().stream()
-                .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
-            return ResponseEntity.badRequest().body(errors);
-        }                            
+        ResponseEntity<?> errorResponse = handleBindingErrors(bindingResult);
+        if(errorResponse != null){
+            return errorResponse;
+        }                           
         return sellerService.updateProduct(updateProduct, id, authentication);
     }
 

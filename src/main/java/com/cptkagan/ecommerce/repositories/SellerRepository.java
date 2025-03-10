@@ -16,6 +16,6 @@ public interface SellerRepository extends JpaRepository<Seller, Long> {
     boolean existsByUserName(String userName);
     boolean existsByEmail(String email);
 
-    @Query("SELECT s FROM Seller s WHERE s.isApprovedByAdmin = false AND s.isActivated = true")
+    @Query("SELECT s FROM Seller s WHERE s.isApprovedByAdmin IS NULL AND s.isActivated = true")
     List<Seller> findWaitingApprove();
 }

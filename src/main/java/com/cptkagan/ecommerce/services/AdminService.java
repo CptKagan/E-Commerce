@@ -65,15 +65,69 @@ public class AdminService {
         }
 
         if(!seller.getIsActivated()){
-            return ResponseEntity.badRequest().body("Email not verified. Is not approveable yet!");
+            return ResponseEntity.badRequest().body("Email not verified. Is not approvable yet!");
         }
 
-        if(seller.getIsApprovedByAdmin()){
+        if(Boolean.TRUE.equals(seller.getIsApprovedByAdmin())){
             return ResponseEntity.ok("Seller is already approved!");
+        }
+
+        if(Boolean.FALSE.equals(seller.getIsApprovedByAdmin())){
+            return ResponseEntity.ok("Seller is already rejected. You can not approve an already rejected seller.");
         }
 
         seller.setIsApprovedByAdmin(true);
         sellerRepository.save(seller);
+        emailService.sendAccountApprovedEmail(seller.getEmail());
+        
+        return ResponseEntity.ok("Seller approved. Now login is allowed!");
+    }
+
+    public ResponseEntity<?> rejectSeller(Long id, Authentication authentication) {
+        Seller seller = sellerService.findById(id);
+        if(seller == null){
+            return ResponseEntity.badRequest().body("No seller exists with that id!");
+        }
+
+        if(!seller.getIsActivated()){
+            return ResponseEntity.badRequest().body("Email not verified. It's not rejectable yet!");
+        }
+
+        if(Boolean.TRUE.equals(seller.getIsApprovedByAdmin())){
+            return ResponseEntity.ok("Seller is already approved!");
+        }
+
+        if(Boolean.FALSE.equals(seller.getIsApprovedByAdmin())){
+            return ResponseEntity.ok("Seller is already rejected. You can not reject an already rejected seller.");
+        }
+
+        seller.setIsApprovedByAdmin(false);
+        sellerRepository.save(seller);
+
+        return ResponseEntity.ok("Seller rejected.");
+    }
+
+    public ResponseEntity<?> approveRejectedSeller(Long id, Authentication authentication) {
+        Seller seller = sellerService.findById(id);
+        if(seller == null){
+            return ResponseEntity.badRequest().body("No seller exists with that id!");
+        }
+
+        if(!seller.getIsActivated()){
+            return ResponseEntity.badRequest().body("Email not verified. It's not rejectable yet!");
+        }
+
+        if(Boolean.TRUE.equals(seller.getIsApprovedByAdmin())){
+            return ResponseEntity.ok("Seller is already approved!");
+        }
+
+        if(seller.getIsApprovedByAdmin() == null){
+            return ResponseEntity.badRequest().body("User is already waiting for an approval. Its not rejected!");
+        }
+
+        seller.setIsApprovedByAdmin(true);
+        sellerRepository.save(seller);
+
         emailService.sendAccountApprovedEmail(seller.getEmail());
         
         return ResponseEntity.ok("Seller approved. Now login is allowed!");

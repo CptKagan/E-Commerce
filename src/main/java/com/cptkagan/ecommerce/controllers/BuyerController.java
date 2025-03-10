@@ -40,12 +40,20 @@ public class BuyerController {
     @Autowired
     private BuyerService buyerService;
 
-    @PostMapping("/placeorder")
-    public ResponseEntity<?> placeOrder(@Valid @RequestBody OrderRequest orderRequest, BindingResult bindingResult, Authentication authentication) {
+    private ResponseEntity<?> handleBindingErrors(BindingResult bindingResult){
         if (bindingResult.hasErrors()) {
             Map<String, String> errors = bindingResult.getFieldErrors().stream()
                 .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
             return ResponseEntity.badRequest().body(errors);
+        }
+        return null;
+    }
+
+    @PostMapping("/placeorder")
+    public ResponseEntity<?> placeOrder(@Valid @RequestBody OrderRequest orderRequest, BindingResult bindingResult, Authentication authentication) {
+        ResponseEntity<?> errorResponse = handleBindingErrors(bindingResult);
+        if(errorResponse != null){
+            return errorResponse;
         }
 
         return orderService.placeOrder(orderRequest, authentication);
@@ -68,10 +76,9 @@ public class BuyerController {
 
     @PostMapping("/cart/addproduct")
     public ResponseEntity<?> addProductToCart(@Valid @RequestBody CartRequest cartRequest, Authentication authentication, BindingResult bindingResult) {
-        if (bindingResult.hasErrors()) {
-            Map<String, String> errors = bindingResult.getFieldErrors().stream()
-                .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
-            return ResponseEntity.badRequest().body(errors);
+        ResponseEntity<?> errorResponse = handleBindingErrors(bindingResult);
+        if(errorResponse != null){
+            return errorResponse;
         }
         return buyerService.addProductToCart(cartRequest, authentication);
     }
