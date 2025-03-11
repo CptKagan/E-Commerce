@@ -22,10 +22,11 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class ReceiptService {
-    private static final String INVOICE_DIR = "C:\\Users\\mkaga\\Videos\\Invoices\\";
-    private static final String NORMAL_FONT_PATH = "C:\\Users\\mkaga\\Videos\\Invoices\\DejaVuSans.ttf"; // Unicode Font
-    private static final String BOLD_FONT_PATH = "C:\\Users\\mkaga\\Videos\\Invoices\\DejaVuSans-Bold.ttf";
-    private static final String ITALIC_FONT_PATH = "C:\\Users\\mkaga\\Videos\\Invoices\\DejaVuSans-Oblique.ttf";
+    private static final String INVOICE_DIR = "/app/Invoices/";
+    private static final String NORMAL_FONT_PATH = "/app/fonts/DejaVuSans.ttf"; 
+    private static final String BOLD_FONT_PATH = "/app/fonts/DejaVuSans-Bold.ttf";
+    private static final String ITALIC_FONT_PATH = "/app/fonts/DejaVuSans-Oblique.ttf";
+    private static final String LOGO_PATH = "/app/logos/logo.png";
 
     public String generateInvoice(Order order) {
         String filePath = INVOICE_DIR + "invoice_" + order.getId() + ".pdf";
@@ -43,7 +44,7 @@ public class ReceiptService {
             PdfFont italicFont = PdfFontFactory.createFont(ITALIC_FONT_PATH, "Identity-H");
 
             // Logo
-            String logoPath = "C:\\Users\\mkaga\\Videos\\Invoices\\logo.png";
+            String logoPath = LOGO_PATH;
             ImageData imageData = ImageDataFactory.create(logoPath);
             Image logo = new Image(imageData);
             logo.setHorizontalAlignment(HorizontalAlignment.CENTER);
