@@ -9,6 +9,8 @@ import com.cptkagan.ecommerce.services.BuyerService;
 import com.cptkagan.ecommerce.services.SellerService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import com.cptkagan.ecommerce.services.AuthService;
@@ -52,8 +54,22 @@ public class AccountController {
 
     @Operation(summary = "Register endpoint for buyers",
                responses = {
-                    @ApiResponse(responseCode = "200", description = "User registered successfully, please check your email to verify your account!"),
-                    @ApiResponse(responseCode = "400", description = "Username or Email is already taken")
+                    @ApiResponse(
+                        responseCode = "200",
+                        description = "User registered successfully",
+                        content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(type= "string", example = "User registered successfully, please check your email to verify your account!")
+                        )
+                        ),
+                        @ApiResponse(
+                            responseCode = "400",
+                            description = "Registration failed due to duplicate username/email",
+                            content = @Content(
+                                mediaType = "application/json",
+                                schema = @Schema(type= "string", example = "Username is already taken / Email is already taken")
+                            )
+                            ),
                })
     @PostMapping("/register/buyer")
     public ResponseEntity<?> registerBuyer(@Valid @RequestBody BuyerRegisterRequest buyerRegisterRequest,
@@ -69,21 +85,48 @@ public class AccountController {
         }
     }
 
-    @Operation(summary = "Verifying Email with token",
+    @Operation(summary = "Email verification endpoint for buyers",
                responses = {
-                    @ApiResponse(responseCode = "200", description = "Account verified successfully!"),
-                    @ApiResponse(responseCode = "400", description = "Invalid/expired token or account is already verified!")
+                    @ApiResponse(
+                        responseCode = "200",
+                        description = "Verificaiton successful",
+                        content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(type= "string", example = "Account verified successfully!")
+                        )
+                        ),
+                        @ApiResponse(
+                            responseCode = "400",
+                            description = "Verification failed",
+                            content = @Content(
+                                mediaType = "application/json",
+                                schema = @Schema(type= "string", example = "Invalid/expired token or account is already verified!")
+                            )
+                            ),
                })
     @PostMapping("/verify/buyer/{token}")
     public ResponseEntity<?> verifyBuyer(@PathVariable String token) {
         return buyerService.verifyBuyer(token);
     }
 
-
-    @Operation(summary = "Verifying Email with token",
+    @Operation(summary = "Email verification endpoint for sellers",
                responses = {
-                    @ApiResponse(responseCode = "200", description = "Account verified successfully!"),
-                    @ApiResponse(responseCode = "400", description = "Invalid/expired token or account is already verified!")
+                    @ApiResponse(
+                        responseCode = "200",
+                        description = "Verificaiton successful",
+                        content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(type= "string", example = "Account verified successfully! Please wait for your account to get reviewed and approved by a moderator.")
+                        )
+                        ),
+                        @ApiResponse(
+                            responseCode = "400",
+                            description = "Verification failed",
+                            content = @Content(
+                                mediaType = "application/json",
+                                schema = @Schema(type= "string", example = "Invalid/expired token or account is already verified!")
+                            )
+                            ),
                })
     @PostMapping("/verify/seller/{token}")
     public ResponseEntity<?> verifySeller(@PathVariable String token) {
@@ -92,8 +135,22 @@ public class AccountController {
     
     @Operation(summary = "Register endpoint for sellers",
                responses = {
-                    @ApiResponse(responseCode = "200", description = "User registered successfully"),
-                    @ApiResponse(responseCode = "400", description = "Username or Email is already taken")
+                    @ApiResponse(
+                        responseCode = "200",
+                        description = "Seller registered successfully",
+                        content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(type= "string", example = "User registered successfully, please check your email to verify your account!")
+                        )
+                        ),
+                        @ApiResponse(
+                            responseCode = "400",
+                            description = "Registration failed due to duplicate username/email",
+                            content = @Content(
+                                mediaType = "application/json",
+                                schema = @Schema(type= "string", example = "Username is already taken / Email is already taken")
+                            )
+                            ),
                })
     @PostMapping("/register/seller")
     public ResponseEntity<?> registerSeller(@Valid @RequestBody SellerRegisterRequest sellerRegisterRequest,
@@ -109,11 +166,49 @@ public class AccountController {
         }
     }
 
+    @Operation(summary = "Login endpoint for buyers, returns a JWT token",
+               responses = {
+                    @ApiResponse(
+                        responseCode = "200",
+                        description = "Login successful",
+                        content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(type= "string", example = "token")
+                        )
+                        ),
+                        @ApiResponse(
+                            responseCode = "400",
+                            description = "Login failed",
+                            content = @Content(
+                                mediaType = "application/json",
+                                schema = @Schema(type= "string", example = "Invalid username or password / Account is not activated!")
+                            )
+                            ),
+               })
     @PostMapping("/login/buyer")
     public ResponseEntity<?> buyerLogin(@Valid @RequestBody LoginRequest loginRequest, BindingResult bindingResult) {
         return handleLogin(loginRequest, bindingResult, "BUYER");
     }
 
+    @Operation(summary = "Login endpoint for sellers, returns a JWT token",
+               responses = {
+                    @ApiResponse(
+                        responseCode = "200",
+                        description = "Login successful",
+                        content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(type= "string", example = "token")
+                        )
+                        ),
+                        @ApiResponse(
+                            responseCode = "400",
+                            description = "Login failed",
+                            content = @Content(
+                                mediaType = "application/json",
+                                schema = @Schema(type= "string", example = "Invalid username or password / Account is not activated!")
+                            )
+                            ),
+               })
     @PostMapping("/login/seller")
     public ResponseEntity<?> sellerLogin(@Valid @RequestBody LoginRequest loginRequest, BindingResult bindingResult) {
         return handleLogin(loginRequest, bindingResult, "SELLER");
@@ -132,6 +227,25 @@ public class AccountController {
         }
     }
 
+    @Operation(summary = "Login endpoint for admins, returns a JWT token",
+               responses = {
+                    @ApiResponse(
+                        responseCode = "200",
+                        description = "Login successful",
+                        content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(type= "string", example = "token")
+                        )
+                        ),
+                        @ApiResponse(
+                            responseCode = "400",
+                            description = "Login failed",
+                            content = @Content(
+                                mediaType = "application/json",
+                                schema = @Schema(type= "string", example = "Invalid username or password / Account is not activated!")
+                            )
+                            ),
+               })
     @PostMapping("/login/admin")
     public ResponseEntity<?> adminLogin(@Valid @RequestBody LoginRequest loginRequest, BindingResult bindingResult) {
         return handleLogin(loginRequest, bindingResult, "ADMIN");
