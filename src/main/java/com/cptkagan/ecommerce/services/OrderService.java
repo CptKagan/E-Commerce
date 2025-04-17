@@ -5,16 +5,21 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.cptkagan.ecommerce.DTOs.requestDTO.OrderRequest;
+import com.cptkagan.ecommerce.DTOs.responseDTO.OrderHistory;
+import com.cptkagan.ecommerce.DTOs.responseDTO.ProductResponse;
+import com.cptkagan.ecommerce.DTOs.responseDTO.SellerNotifyAfterOrder;
 import com.cptkagan.ecommerce.enums.OrderStatus;
+import com.cptkagan.ecommerce.exception.PaymentFailedException;
+import com.cptkagan.ecommerce.exception.ResourceNotFoundException;
 import com.cptkagan.ecommerce.models.Buyer;
 import com.cptkagan.ecommerce.models.Cart;
 import com.cptkagan.ecommerce.models.Order;
@@ -23,11 +28,8 @@ import com.cptkagan.ecommerce.models.Product;
 import com.cptkagan.ecommerce.repositories.CartRepository;
 import com.cptkagan.ecommerce.repositories.OrderRepository;
 import com.cptkagan.ecommerce.repositories.ProductRepository;
-import com.stripe.Stripe;
-import com.stripe.exception.StripeException;
-import com.stripe.model.PaymentIntent;
-import com.stripe.model.PaymentMethod;
-import com.stripe.param.PaymentIntentCreateParams;
+
+import jakarta.persistence.EntityManager;
 
 @Service
 public class OrderService {
@@ -49,63 +51,69 @@ public class OrderService {
     @Autowired
     private ReceiptService receiptService;
 
-    @Value("${stripe.secret.key}")
-    private String stripeSecretKey;
+    @Autowired
+    private PaymentService paymentService;
 
-    @Transactional
-    public ResponseEntity<?> placeOrder(OrderRequest orderRequest, Authentication authentication) {
-        Buyer buyer = buyerService.findByUserName(authentication.getName());
-        if(buyer == null){
-            return ResponseEntity.badRequest().body("User not found");
+    @Autowired
+    private EntityManager entityManager;
+
+    @Transactional(isolation = Isolation.READ_COMMITTED, timeout = 180) // 180 secs, or SET LOCAL lock_timeout = '180s' in db
+    public OrderHistory placeOrder(OrderRequest orderRequest, String userName) {
+        Buyer buyer = buyerService.findByUserName(userName);
+        if (buyer == null) {
+            throw new UsernameNotFoundException("User not found!");
         }
 
         List<Cart> cart = cartRepository.findAllByBuyerId(buyer.getId());
-        if(cart.isEmpty()){
-            return ResponseEntity.badRequest().body("Cart is empty!");
+        if (cart.isEmpty()) {
+            throw new ResourceNotFoundException("Cart is empty!");
         }
 
         double totalPrice = 0;
-        // CHECK STOCKS (IDK HOW TO BLOCK STOCK WHILE GETTING MULTIPLE REQUESTS)
-        for(Cart cartItem : cart){
-            if(cartItem.getProduct().getStockQuantity() < cartItem.getQuantity()){
-                return ResponseEntity.badRequest().body("Stock is not enough for " + cartItem.getProduct().getName());
+        Map<Long, Product> lockedProducts = new HashMap<>();
+
+        // LOCK STOCK BEFORE UPDATING
+        for (Cart cartItem : cart) {
+            Optional<Product> productOpt = productRepository.findByIdWithLock(cartItem.getProduct().getId());
+
+            if (!productOpt.isPresent()) {
+                throw new ResourceNotFoundException("Product not found!");
             }
-            totalPrice += cartItem.getProduct().getPrice() * cartItem.getQuantity();
+
+            Product product = productOpt.get();
+
+            if (product.getStockQuantity() < cartItem.getQuantity()) {
+                throw new IllegalArgumentException("Stock is not enough for " + product.getName());
+            }
+            totalPrice += product.getPrice() * cartItem.getQuantity();
+            lockedProducts.put(product.getId(), product);
         }
 
-        // Everything is fine, proceed to payment
-        try{
-            Stripe.apiKey = stripeSecretKey;
-
-                // Process payment
-                Map<String, Object> paymentMethodParams = new HashMap<>();
-                paymentMethodParams.put("type", "card");
-                paymentMethodParams.put("card", Map.of("token", orderRequest.getPayment().getPaymentToken()));
-
-                PaymentMethod paymentMethod = PaymentMethod.create(paymentMethodParams);
-
-                PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
-                    .setAmount((long) (totalPrice * 100)) // IN CENTS
-                    .setCurrency("usd")
-                    .setPaymentMethod(paymentMethod.getId())
-                    .setConfirm(true)
-                    .setDescription("E-commerce Order Payment")
-                    .setAutomaticPaymentMethods(
-                        PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
-                            .setEnabled(true)
-                            .setAllowRedirects(PaymentIntentCreateParams.AutomaticPaymentMethods.AllowRedirects.NEVER)
-                            .build()
-                    )
-                    .build();
-
-                PaymentIntent intent = PaymentIntent.create(params);
-
-                if(!intent.getStatus().equals("succeeded")){
-                    return ResponseEntity.badRequest().body("Payment Failed!");
-                }
-        } catch(StripeException e){
-            return ResponseEntity.badRequest().body("Stripe payment error: "+ e.getMessage());
+        // Stripe payment
+        try {
+            paymentService.stripePayment(orderRequest, totalPrice);
+        } catch (PaymentFailedException e) {
+            throw new PaymentFailedException("Payment processing failed: " + e.getMessage());
         }
+
+        // UPDATE STOCKS
+        for(Cart cartItem : cart){
+            Product product = lockedProducts.get(cartItem.getProduct().getId());
+
+            entityManager.refresh(product);
+
+            if(product.getStockQuantity() < cartItem.getQuantity()){
+                throw new IllegalArgumentException("Stock is not enough for " + product.getName());
+            }
+
+            product.setStockQuantity(product.getStockQuantity() - cartItem.getQuantity());
+            productRepository.save(product);
+            if (product.getStockQuantity() < product.getLowStockWarning()) {
+                emailService.sendLowStockEmail(product.getSeller().getEmail(), product.getName(),
+                        product.getStockQuantity());
+            }
+        }
+        
 
         // PAYMENT SUCCESS
         // PLACE ORDER
@@ -117,24 +125,43 @@ public class OrderService {
         orderRepository.save(order);
 
         List<OrderItem> orderItems = new ArrayList<>();
-        List<Long> notifiedSellers = new ArrayList<>();
-        // UPDATE STOCKS, STORE ORDER ITEMS
-        for(Cart cartItems : cart){
-            Product product = cartItems.getProduct();
-            product.setStockQuantity(product.getStockQuantity() - cartItems.getQuantity());
-            productRepository.save(product);
-            if(product.getStockQuantity() < product.getLowStockWarning()){
-                emailService.sendLowStockEmail(product.getSeller().getEmail(), product.getName(), product.getStockQuantity());
-            }
+        Map<String, List<SellerNotifyAfterOrder>> sellerEmail = new HashMap<>();
+        // STORE ORDER ITEMS
+        for (Cart cartItem : cart) {
+            Product product = lockedProducts.get(cartItem.getProduct().getId());            
 
-            OrderItem orderItem = new OrderItem(order, product, cartItems.getQuantity());
+            OrderItem orderItem = new OrderItem(order, product, cartItem.getQuantity());
             orderItems.add(orderItem);
 
-            // Notify Seller, this should change to all orderItems in one mail, not only the first item that appears.
-            if(!notifiedSellers.contains(product.getSeller().getId())){
-                emailService.sendOrderItemNotifyEmail(product.getSeller().getEmail(), product.getName(), cartItems.getQuantity(), product.getPrice()*cartItems.getQuantity());
-                notifiedSellers.add(product.getSeller().getId());
+            sellerEmail.computeIfAbsent(product.getSeller().getEmail(), k -> new ArrayList<>())
+                    .add(new SellerNotifyAfterOrder(
+                            new ProductResponse(product),
+                            orderItem.getQuantity()));
+        }
+
+        // Send Email to Sellers
+        for (Map.Entry<String, List<SellerNotifyAfterOrder>> entry : sellerEmail.entrySet()) {
+            String to = entry.getKey();
+            List<SellerNotifyAfterOrder> items = entry.getValue();
+
+            StringBuilder message = new StringBuilder();
+            message.append("A new order has been placed. Here are the details:\n\n");
+            message.append("Order ID: " + order.getId() + "\n");
+            message.append("Buyer: " + order.getBuyer().getUserName() + "\n");
+            message.append("Buyer Email: " + order.getBuyer().getEmail() + "\n");
+            message.append("Buyer Phone Number: " + order.getBuyer().getPhoneNumber() + "\n");
+            message.append("Shipping Address:" + order.getAddress() + "\n\n");
+            message.append("Products:\n");
+
+            for (SellerNotifyAfterOrder item : items) {
+                message.append("Product ID: ").append(item.getProduct().getId()).append("\n");
+                message.append("Product: ").append(item.getProduct().getName()).append("\n");
+                message.append("Quantity: ").append(item.getQuantity()).append("\n");
+                message.append("Unit Price: ").append(item.getProduct().getPrice()).append("$\n");
+                message.append("Total Price: ").append(item.getProduct().getPrice() * item.getQuantity()).append("$\n");
             }
+
+            emailService.sendOrderItemNotifyEmail(to, message.toString());
         }
 
         // UPDATE ORDER
@@ -145,19 +172,33 @@ public class OrderService {
         cartRepository.deleteAll(cart);
 
         // SEND EMAIL
-        String invoicePath = receiptService.generateInvoice(order);
-        emailService.sendInvoiceEmail(order.getBuyer().getEmail(), invoicePath, order.getId());
+        // String invoicePath = receiptService.generateInvoice(order);
+        receiptService.generateInvoice(order).thenAccept(invoicePath -> {
+            if (invoicePath != null) {
+                emailService.sendInvoiceEmail(order.getBuyer().getEmail(), invoicePath, order.getId());
+            } else {
+                System.out.println("Invoice generation failed.");
+            }
+        });
 
-        return ResponseEntity.ok("Order placed successfully");
+        /* Transaction Rollback works. Remove the part to test */
+        // try{
+        // Thread.sleep(200000);
+        // } catch(InterruptedException e){
+        // Thread.currentThread().interrupt();
+        // throw new RuntimeException("Thread interrupted: " + e.getMessage());
+        // }
+
+        return new OrderHistory(order);
     }
 
-    public boolean checkOrderStatus (Order order){
-        if(order.getOrderItems().isEmpty()){
+    public boolean checkOrderStatus(Order order) {
+        if (order.getOrderItems().isEmpty()) {
             return false;
         }
         OrderStatus firstStatus = order.getOrderItems().get(0).getStatus();
-        for(int i = 1; i<order.getOrderItems().size(); i++){
-            if(order.getOrderItems().get(i).getStatus() != firstStatus){
+        for (int i = 1; i < order.getOrderItems().size(); i++) {
+            if (order.getOrderItems().get(i).getStatus() != firstStatus) {
                 return false;
             }
         }

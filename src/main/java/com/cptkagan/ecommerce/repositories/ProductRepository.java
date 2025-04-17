@@ -5,9 +5,13 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.cptkagan.ecommerce.models.Product;
+
+import jakarta.persistence.LockModeType;
 
 /**
  * Added JpaSpecificationExecuter to the repository to be able to use JPA Specifications. 
@@ -21,4 +25,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     boolean existsBySellerIdAndName(Long sellerId, String name);
     Optional<Product> findById(Long id);
     List<Product> findAllBySellerId(Long sellerId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Product p WHERE p.id = :productId")
+    Optional<Product> findByIdWithLock(Long productId);
 }

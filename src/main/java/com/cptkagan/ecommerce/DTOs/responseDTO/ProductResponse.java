@@ -1,5 +1,6 @@
 package com.cptkagan.ecommerce.DTOs.responseDTO;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 import com.cptkagan.ecommerce.models.Product;
@@ -11,7 +12,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class ProductResponse {
+public class ProductResponse implements Serializable {
+    private static final long serialVersionUID = 1L;
     private Long id;
     private String name;
     private String description;
@@ -33,6 +35,4 @@ public class ProductResponse {
         this.updatedAt = product.getUpdatedAt();
         this.sellerName = product.getSeller().getCompanyName();
     }
-
-
 }

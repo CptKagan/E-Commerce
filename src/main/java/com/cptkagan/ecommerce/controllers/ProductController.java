@@ -2,6 +2,7 @@ package com.cptkagan.ecommerce.controllers;
 
 import org.springframework.web.bind.annotation.RestController;
 
+import com.cptkagan.ecommerce.DTOs.responseDTO.ProductResponse;
 import com.cptkagan.ecommerce.services.ProductService;
 
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,7 +20,12 @@ public class ProductController {
 
     @GetMapping("/products/id/{id}")
     public ResponseEntity<?> getSingleProduct(@PathVariable Long id) {
-        return productService.getSingleProduct(id);
+        try{
+            ProductResponse response = productService.getSingleProductDto(id);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e){
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @GetMapping("/products/filter")

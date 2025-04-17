@@ -13,7 +13,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class SellerResponseAdmin {
     private Long id;
-    private String firsName;
+    private String firstName;
     private String lastName;
     private String address;
     private String gender;
@@ -27,13 +27,13 @@ public class SellerResponseAdmin {
 
     public SellerResponseAdmin(Seller seller){
         this.id = seller.getId();
-        this.firsName = seller.getFirstName();
+        this.firstName = seller.getFirstName();
         this.lastName = seller.getLastName();
         this.address = seller.getAddress();
         if(seller.getGender()){
             this.gender = "Male";
         }
-        if(!seller.getGender()){
+        else if(!seller.getGender()){
             this.gender = "Female";
         }
         if(seller.getGender() == null){

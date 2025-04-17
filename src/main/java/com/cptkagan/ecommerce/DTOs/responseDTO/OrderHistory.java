@@ -1,5 +1,6 @@
 package com.cptkagan.ecommerce.DTOs.responseDTO;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -13,7 +14,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class OrderHistory {
+public class OrderHistory implements Serializable {
     private Long orderId;
     private String buyerName;
     private LocalDateTime orderDate;

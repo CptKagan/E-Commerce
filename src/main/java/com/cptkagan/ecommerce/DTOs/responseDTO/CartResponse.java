@@ -1,5 +1,7 @@
 package com.cptkagan.ecommerce.DTOs.responseDTO;
 
+import java.io.Serializable;
+
 import com.cptkagan.ecommerce.models.Cart;
 
 import lombok.AllArgsConstructor;
@@ -11,7 +13,8 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class CartResponse {
+public class CartResponse implements Serializable {
+    private static final long serialVersionUID=3L;
     private Long productId;
     private String productName;
     private int quantity;

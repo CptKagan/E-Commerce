@@ -1,5 +1,7 @@
 package com.cptkagan.ecommerce.controllers;
 
+import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -14,10 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.cptkagan.ecommerce.DTOs.requestDTO.CartRequest;
 import com.cptkagan.ecommerce.DTOs.requestDTO.OrderRequest;
+import com.cptkagan.ecommerce.DTOs.responseDTO.CartDTO;
 import com.cptkagan.ecommerce.DTOs.responseDTO.CartResponse;
 import com.cptkagan.ecommerce.DTOs.responseDTO.OrderHistory;
+import com.cptkagan.ecommerce.DTOs.responseDTO.OrderItemResponse;
 import com.cptkagan.ecommerce.DTOs.responseDTO.ProductResponse;
-import com.cptkagan.ecommerce.models.Cart;
 import com.cptkagan.ecommerce.services.BuyerService;
 import com.cptkagan.ecommerce.services.OrderService;
 
@@ -35,7 +38,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 
-
 @RestController
 @RequestMapping("/api/buyer")
 @PreAuthorize("hasRole('ROLE_BUYER')") // WHY DOES IT WORK? IT MAKES IT ROLE_ROLE_BUYER???
@@ -49,346 +51,176 @@ public class BuyerController {
     @Autowired
     private BuyerService buyerService;
 
-    private ResponseEntity<?> handleBindingErrors(BindingResult bindingResult){
+    private ResponseEntity<?> handleBindingErrors(BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             Map<String, String> errors = bindingResult.getFieldErrors().stream()
-                .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
+                    .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
             return ResponseEntity.badRequest().body(errors);
         }
         return null;
     }
 
-    @Operation(summary = "Place order for items that are in the cart",
-                responses = {
-                    @ApiResponse(
-                        responseCode = "200",
-                        description = "Order placement successful",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "String", example = "Order placed successfully")
-                        )
-                    ),
-                    @ApiResponse(
-                        responseCode = "400",
-                        description = "Order placement failed",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string"),
-                            examples = {
-                                @ExampleObject(name = "UserNotFound", value = "User not found"),
-                                @ExampleObject(name = "EmptyCart", value = "Cart is empty"),
-                                @ExampleObject(name = "InsufficientStock", value = "Stock is not enough for {product_name}"),
-                                @ExampleObject(name = "StripeError", value = "Stripe payment error: invalid card token")
-                            }
-                        )
-                    )
-                }
-    )
+    @Operation(summary = "Place order for items that are in the cart", responses = {
+            @ApiResponse(responseCode = "200", description = "Order placement successful", content = @Content(mediaType = "application/json", schema = @Schema(type = "String", example = "Order placed successfully"))),
+            @ApiResponse(responseCode = "400", description = "Order placement failed", content = @Content(mediaType = "application/json", schema = @Schema(type = "string"), examples = {
+                    @ExampleObject(name = "UserNotFound", value = "User not found"),
+                    @ExampleObject(name = "EmptyCart", value = "Cart is empty"),
+                    @ExampleObject(name = "InsufficientStock", value = "Stock is not enough for {product_name}"),
+                    @ExampleObject(name = "StripeError", value = "Stripe payment error: invalid card token")
+            }))
+    })
     @PostMapping("/placeorder")
-    public ResponseEntity<?> placeOrder(@Valid @RequestBody OrderRequest orderRequest, BindingResult bindingResult, Authentication authentication) {
+    public ResponseEntity<?> placeOrder(@Valid @RequestBody OrderRequest orderRequest, BindingResult bindingResult,
+            Authentication authentication) {
         ResponseEntity<?> errorResponse = handleBindingErrors(bindingResult);
-        if(errorResponse != null){
+        if (errorResponse != null) {
             return errorResponse;
         }
-
-        return orderService.placeOrder(orderRequest, authentication);
+        OrderHistory response = orderService.placeOrder(orderRequest, authentication.getName());
+        return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Order history",
-                responses = {
-                    @ApiResponse(
-                        responseCode = "200",
-                        description = "Order history retrieved successfully",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "array", implementation = OrderHistory.class)
-                        )
-                    ),
-                    @ApiResponse(
-                        responseCode = "400",
-                        description = "Order history could not be retrieved",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string", example = "User not found!")
-                        )
-                    )
-                }
-    )
+    @Operation(summary = "Order history", responses = {
+            @ApiResponse(responseCode = "200", description = "Order history retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(type = "array", implementation = OrderHistory.class))),
+            @ApiResponse(responseCode = "400", description = "Order history could not be retrieved", content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "User not found!")))
+    })
     @GetMapping("/orderhistory")
     public ResponseEntity<?> getOrderHistory(Authentication authentication) {
-        return buyerService.getOrderHistory(authentication);
+        List<OrderHistory> orderHistory = buyerService.getOrderHistory(authentication.getName());
+        if (orderHistory == null) {
+            return ResponseEntity.ok("No order history record found!");
+        }
+        return ResponseEntity.ok(orderHistory);
     }
-    
-    @Operation(summary = "Cancel single order item",
-                responses = {
-                    @ApiResponse(
-                        responseCode = "200",
-                        description = "Order item cancelled successfully",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string", example = "Order item cancelled successfully!")
-                        )
-                    ),
-                    @ApiResponse(
-                        responseCode = "400",
-                        description = "Order item cancellation failed",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string"),
-                            examples = {
-                                @ExampleObject(name = "UserNotFound", value = "User not found"),
-                                @ExampleObject(name = "ItemNotFound", value = "Item not found!"),
-                                @ExampleObject(name = "NotBelongToUser", value = "Item does not belong to the user!"),
-                                @ExampleObject(name = "NotSuitableForCancellation", value = "Item is already shipped or delivered, cannot be cancelled!")
-                            }
-                        )
-                    )
-                }
-    )
+
+    @Operation(summary = "Cancel single order item", responses = {
+            @ApiResponse(responseCode = "200", description = "Order item cancelled successfully", content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "Order item cancelled successfully!"))),
+            @ApiResponse(responseCode = "400", description = "Order item cancellation failed", content = @Content(mediaType = "application/json", schema = @Schema(type = "string"), examples = {
+                    @ExampleObject(name = "UserNotFound", value = "User not found"),
+                    @ExampleObject(name = "ItemNotFound", value = "Item not found!"),
+                    @ExampleObject(name = "NotBelongToUser", value = "Item does not belong to the user!"),
+                    @ExampleObject(name = "NotSuitableForCancellation", value = "Item is already shipped or delivered, cannot be cancelled!")
+            }))
+    })
     @PostMapping("/cancelorderitem/{id}")
     public ResponseEntity<?> cancelOrderItem(@PathVariable Long id, Authentication authentication) {
-        return buyerService.cancelOrderItem(id, authentication);
-    }
-    
-    @Operation(summary = "Cancel order",
-                responses = {
-                    @ApiResponse(
-                        responseCode = "200",
-                        description = "Order cancelled successfully",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string", example = "Order cancelled succesfully. All items that are not already SHIPPED OR DELIVERED are cancelled!")
-                        )
-                    ),
-                    @ApiResponse(
-                        responseCode = "400",
-                        description = "Order cancellation failed",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string"),
-                            examples = {
-                                @ExampleObject(name = "UserNotFound", value = "User not found"),
-                                @ExampleObject(name = "OrderNotFound", value = "Order not found!"),
-                                @ExampleObject(name = "NotBelongToUser", value = "Order does not belong to the user!"),
-                                @ExampleObject(name = "NotSuitableForCancellation", value = "Order is already shipped or delivered, cannot be cancelled!")
-                            }
-                        )
-                    )
-                }
-    )
-    @PostMapping("/cancelorder/{id}")
-    public ResponseEntity<?> cancelOrder(@PathVariable Long id, Authentication authentication){
-        return buyerService.cancelOrder(id, authentication);
+        OrderItemResponse orderItem = buyerService.cancelOrderItem(id, authentication.getName());
+        return ResponseEntity.ok(orderItem);
     }
 
-    @Operation(summary = "Add product to cart",
-                responses = {
-                    @ApiResponse(
-                        responseCode = "200",
-                        description = "Success",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string"),
-                            examples = {
-                                @ExampleObject(name = "ProductQuantity", value = "Product quantity updated in cart!"),
-                                @ExampleObject(name = "ProductAdded", value = "Product added to cart successfully!")
-                            }
-                        )
-                    ),
-                    @ApiResponse(
-                        responseCode = "400",
-                        description = "Failed",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string"),
-                            examples = {
-                                @ExampleObject(name = "UserNotFound", value = "User not found"),
-                                @ExampleObject(name = "ProductNotFound", value = "Product not found!"),
-                                @ExampleObject(name = "QuantityNotPositive", value = "Quantity must be greated than 0!"),
-                            }
-                        )
-                    )
-                }
-    )
+    @Operation(summary = "Cancel order", responses = {
+            @ApiResponse(responseCode = "200", description = "Order cancelled successfully", content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "Order cancelled succesfully. All items that are not already SHIPPED OR DELIVERED are cancelled!"))),
+            @ApiResponse(responseCode = "400", description = "Order cancellation failed", content = @Content(mediaType = "application/json", schema = @Schema(type = "string"), examples = {
+                    @ExampleObject(name = "UserNotFound", value = "User not found"),
+                    @ExampleObject(name = "OrderNotFound", value = "Order not found!"),
+                    @ExampleObject(name = "NotBelongToUser", value = "Order does not belong to the user!"),
+                    @ExampleObject(name = "NotSuitableForCancellation", value = "Order is already shipped or delivered, cannot be cancelled!")
+            }))
+    })
+    @PostMapping("/cancelorder/{id}")
+    public ResponseEntity<?> cancelOrder(@PathVariable Long id, Authentication authentication) {
+        OrderHistory orderHistory = buyerService.cancelOrder(id, authentication.getName());
+        return ResponseEntity.ok(orderHistory);
+    }
+
+    @Operation(summary = "Add product to cart", responses = {
+            @ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = "application/json", schema = @Schema(type = "string"), examples = {
+                    @ExampleObject(name = "ProductQuantity", value = "Product quantity updated in cart!"),
+                    @ExampleObject(name = "ProductAdded", value = "Product added to cart successfully!")
+            })),
+            @ApiResponse(responseCode = "400", description = "Failed", content = @Content(mediaType = "application/json", schema = @Schema(type = "string"), examples = {
+                    @ExampleObject(name = "UserNotFound", value = "User not found"),
+                    @ExampleObject(name = "ProductNotFound", value = "Product not found!"),
+                    @ExampleObject(name = "QuantityNotPositive", value = "Quantity must be greater than 0!"),
+            }))
+    })
     @PostMapping("/cart/addproduct")
-    public ResponseEntity<?> addProductToCart(@Valid @RequestBody CartRequest cartRequest, Authentication authentication, BindingResult bindingResult) {
+    public ResponseEntity<?> addProductToCart(@Valid @RequestBody CartRequest cartRequest,
+            Authentication authentication, BindingResult bindingResult) {
         ResponseEntity<?> errorResponse = handleBindingErrors(bindingResult);
-        if(errorResponse != null){
+        if (errorResponse != null) {
             return errorResponse;
         }
-        return buyerService.addProductToCart(cartRequest, authentication);
+        CartResponse response = buyerService.addProductToCart(cartRequest, authentication.getName());
+        return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "View Cart",
-                responses = {
-                    @ApiResponse(
-                        responseCode = "200",
-                        description = "Success",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "array", implementation = CartResponse.class)
-                        )
-                    ),
-                    @ApiResponse(
-                        responseCode = "400",
-                        description = "Failed",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string", example = "User not found!")
-                        )
-                    )
-                }
-    )
+    @Operation(summary = "View Cart", responses = {
+            @ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = "application/json", schema = @Schema(type = "array", implementation = CartDTO.class))),
+            @ApiResponse(responseCode = "400", description = "Failed", content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "User not found!")))
+    })
     @GetMapping("/cart")
     public ResponseEntity<?> getCart(Authentication authentication) {
-        return buyerService.getCart(authentication);
+        CartDTO response = buyerService.getCart(authentication.getName());
+        return ResponseEntity.ok(response);
     }
-    
-    @Operation(summary = "Update product in the cart",
-                responses = {
-                    @ApiResponse(
-                        responseCode = "200",
-                        description = "Success",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string", example = "Cart updated Successfully!")
-                        )
-                    ),
-                    @ApiResponse(
-                        responseCode = "400",
-                        description = "Failed",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string"),
-                            examples = {
-                                @ExampleObject(name = "UserNotFound", value = "User not found!"),
-                                @ExampleObject(name = "CartItemNotFound", value = "Cart item not found!"),
-                                @ExampleObject(name = "NotBelongToUser", value = "Cart item does not belong to the user!"),
-                                @ExampleObject(name = "QuantityNotPositive", value = "Quantity must be greated than 0!")
-                            }
-                        )
-                    )
-                }
-    )
+
+    @Operation(summary = "Update product in the cart", responses = {
+            @ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "Cart updated Successfully!"))),
+            @ApiResponse(responseCode = "400", description = "Failed", content = @Content(mediaType = "application/json", schema = @Schema(type = "string"), examples = {
+                    @ExampleObject(name = "UserNotFound", value = "User not found!"),
+                    @ExampleObject(name = "CartItemNotFound", value = "Cart item not found!"),
+                    @ExampleObject(name = "NotBelongToUser", value = "Cart item does not belong to the user!"),
+                    @ExampleObject(name = "QuantityNotPositive", value = "Quantity must be greated than 0!")
+            }))
+    })
     @PutMapping("cart/{id}/{quantity}")
-    public ResponseEntity<?> updateCart(@PathVariable Long id, Authentication authentication, @PathVariable Integer quantity) {
-        return buyerService.updateCart(id, authentication, quantity);
+    public ResponseEntity<?> updateCart(@PathVariable Long id, Authentication authentication,
+            @PathVariable Integer quantity) {
+        CartResponse response = buyerService.updateCart(id, authentication.getName(), quantity);
+        return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Delete product in the cart",
-                responses = {
-                    @ApiResponse(
-                        responseCode = "200",
-                        description = "Success",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string", example = "Cart item deleted successfully!")
-                        )
-                    ),
-                    @ApiResponse(
-                        responseCode = "400",
-                        description = "Failed",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string"),
-                            examples = {
-                                @ExampleObject(name = "UserNotFound", value = "User not found!"),
-                                @ExampleObject(name = "CartItemNotFound", value = "Cart item not found!"),
-                                @ExampleObject(name = "NotBelongToUser", value = "Cart item does not belong to the user!")
-                            }
-                        )
-                    )
-                }
-    )
+    @Operation(summary = "Delete product in the cart", responses = {
+            @ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "Cart item deleted successfully!"))),
+            @ApiResponse(responseCode = "400", description = "Failed", content = @Content(mediaType = "application/json", schema = @Schema(type = "string"), examples = {
+                    @ExampleObject(name = "UserNotFound", value = "User not found!"),
+                    @ExampleObject(name = "CartItemNotFound", value = "Cart item not found!"),
+                    @ExampleObject(name = "NotBelongToUser", value = "Cart item does not belong to the user!")
+            }))
+    })
     @DeleteMapping("cart/{id}")
-    public ResponseEntity<?> deleteCart(@PathVariable Long id, Authentication authentication){
-        return buyerService.deleteCart(id, authentication);
+    public ResponseEntity<?> deleteCart(@PathVariable Long id, Authentication authentication) {
+        buyerService.deleteCart(id, authentication.getName());
+        return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Add product to wishlist",
-                responses = {
-                    @ApiResponse(
-                        responseCode = "200",
-                        description = "Success",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string", example = "Product added to wishlist successfully!")
-                        )
-                    ),
-                    @ApiResponse(
-                        responseCode = "400",
-                        description = "Failed",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string"),
-                            examples = {
-                                @ExampleObject(name = "UserNotFound", value = "User not found!"),
-                                @ExampleObject(name = "ProductNotFound", value = "Product not found!"),
-                                @ExampleObject(name = "AlreadyInWishlist", value = "Product already in wishlist!")
-                            }
-                        )
-                    )
-                }
-    )
+    @Operation(summary = "Add product to wishlist", responses = {
+            @ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "Product added to wishlist successfully!"))),
+            @ApiResponse(responseCode = "400", description = "Failed", content = @Content(mediaType = "application/json", schema = @Schema(type = "string"), examples = {
+                    @ExampleObject(name = "UserNotFound", value = "User not found!"),
+                    @ExampleObject(name = "ProductNotFound", value = "Product not found!"),
+                    @ExampleObject(name = "AlreadyInWishlist", value = "Product already in wishlist!")
+            }))
+    })
     @PostMapping("/wishlist/addproduct/{id}")
-    public ResponseEntity<?> addProducttoWishlsit(@PathVariable Long id, Authentication authentication){
-        return buyerService.addProducttoWishlist(id, authentication);
+    public ResponseEntity<?> addProducttoWishlsit(@PathVariable Long id, Authentication authentication) {
+        ProductResponse response = buyerService.addProducttoWishlist(id, authentication.getName());
+        return ResponseEntity.created(URI.create("/wishlist/" + response.getId())).body(response);
     }
 
-    @Operation(summary = "View wishlist",
-                responses = {
-                    @ApiResponse(
-                        responseCode = "200",
-                        description = "Success",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "array", implementation = ProductResponse.class)
-                        )
-                    ),
-                    @ApiResponse(
-                        responseCode = "400",
-                        description = "Failed",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string"),
-                            examples = {
-                                @ExampleObject(name = "UserNotFound", value = "User not found!")
-                            }
-                        )
-                    )
-                }
-    )
+    @Operation(summary = "View wishlist", responses = {
+            @ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = "application/json", schema = @Schema(type = "array", implementation = ProductResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Failed", content = @Content(mediaType = "application/json", schema = @Schema(type = "string"), examples = {
+                    @ExampleObject(name = "UserNotFound", value = "User not found!")
+            }))
+    })
     @GetMapping("/wishlist")
-    public ResponseEntity<?> getWishlist(Authentication authentication){
-        return buyerService.getWishlist(authentication);
+    public ResponseEntity<?> getWishlist(Authentication authentication) {
+        List<ProductResponse> response = buyerService.getWishlist(authentication.getName());
+        return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Delete item from wishlist",
-                responses = {
-                    @ApiResponse(
-                        responseCode = "200",
-                        description = "Success",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string", example = "Wishlist item deleted successfully!")
-                        )
-                    ),
-                    @ApiResponse(
-                        responseCode = "400",
-                        description = "Failed",
-                        content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(type = "string"),
-                            examples = {
-                                @ExampleObject(name = "UserNotFound", value = "User not found!"),
-                                @ExampleObject(name = "WishlistItemNotFound", value = "Wishlist item not found!")
-                            }
-                        )
-                    )
-                }
-    )
+    @Operation(summary = "Delete item from wishlist", responses = {
+            @ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "Wishlist item deleted successfully!"))),
+            @ApiResponse(responseCode = "400", description = "Failed", content = @Content(mediaType = "application/json", schema = @Schema(type = "string"), examples = {
+                    @ExampleObject(name = "UserNotFound", value = "User not found!"),
+                    @ExampleObject(name = "WishlistItemNotFound", value = "Wishlist item not found!")
+            }))
+    })
     @DeleteMapping("/wishlist/{id}")
-    public ResponseEntity<?> deleteWishlistItem(@PathVariable Long id, Authentication authentication){
-        return buyerService.deleteWishlistItem(id, authentication);
+    public ResponseEntity<?> deleteWishlistItem(@PathVariable Long id, Authentication authentication) {
+        buyerService.deleteWishlistItem(id, authentication.getName());
+        return ResponseEntity.noContent().build();
     }
 }

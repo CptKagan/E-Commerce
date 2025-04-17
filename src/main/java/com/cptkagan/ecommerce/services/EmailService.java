@@ -2,12 +2,14 @@ package com.cptkagan.ecommerce.services;
 
 import java.io.File;
 import java.time.LocalDateTime;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import jakarta.mail.internet.MimeMessage;
@@ -34,23 +36,24 @@ public class EmailService {
         javaMailSender.send(message);
     }
 
-    public void sendOrderItemNotifyEmail(String to, String name, int quantity, double d) {
+    @Async
+    public CompletableFuture<Void> sendOrderItemNotifyEmail(String to, String messageBody) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
         message.setSubject("New Order Received");
-        message.setText("A new order item has been added! " + ".\n" +
-            "Product: " + name + "\n" +
-            "Quantity: " + quantity + "\n" +
-            "Price: " + d);
+        message.setText(messageBody);
         javaMailSender.send(message);
+        return CompletableFuture.completedFuture(null);
     }
 
-    public void sendLowStockEmail(String to, String name, Integer stockQuantity) {
+    @Async
+    public CompletableFuture<Void> sendLowStockEmail(String to, String name, Integer stockQuantity) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
         message.setSubject("Low Stock Alert on Product: " + name);
         message.setText("The product " + name + " has only " + stockQuantity + " left in stock. Please restock soon!");
         javaMailSender.send(message);
+        return CompletableFuture.completedFuture(null);
     }
 
     public void sendDiscountEmail(String to, String name, double oldPrice, Double price, Long id) {
@@ -102,6 +105,14 @@ public class EmailService {
         message.setTo(to);
         message.setSubject("Your SELLER Account Has Been Approved");
         message.setText("Your account that waiting for an approval, is approved and ready to login. Thanks for choosing CptKagan E-Commerce!");
+        javaMailSender.send(message);
+    }
+
+    public void sendDailySummaryEmail(String to, String messageBody) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject("Daily Summary of Orders");
+        message.setText(messageBody);
         javaMailSender.send(message);
     }
 }

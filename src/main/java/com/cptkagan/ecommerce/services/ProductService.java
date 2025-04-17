@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -72,12 +73,24 @@ public class ProductService {
         return response;
     }
 
-    public ResponseEntity<?> getSingleProduct(Long id) {
-        Optional<Product> products = productRepository.findById(id);
-        if (!products.isPresent()) {
-            return ResponseEntity.badRequest().body("Product not found");
-        }
+    // @Cacheable(value = "products", key="#id")
+    // public ResponseEntity<?> getSingleProduct(Long id) {
+    //     System.out.println("Fetching product with ID "+ id + " from database.");
+    //     Optional<Product> products = productRepository.findById(id);
+    //     if (!products.isPresent()) {
+    //         return ResponseEntity.badRequest().body("Product not found");
+    //     }
 
-        return ResponseEntity.ok(new ProductResponse(products.get()));
+    //     return ResponseEntity.ok(new ProductResponse(products.get()));
+    // }
+
+
+    @Cacheable(value = "products", key="#id")
+    public ProductResponse getSingleProductDto(Long id) {
+        Optional<Product> productOpt = productRepository.findById(id);
+        if(!productOpt.isPresent()){
+            throw new RuntimeException("Product not found!");
+        }
+        return new ProductResponse(productOpt.get());
     }
 }

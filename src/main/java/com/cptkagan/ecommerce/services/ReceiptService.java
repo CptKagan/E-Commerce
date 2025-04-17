@@ -10,6 +10,8 @@ import com.itextpdf.layout.element.*;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.CompletableFuture;
+
 import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.layout.properties.HorizontalAlignment;
@@ -18,6 +20,7 @@ import com.itextpdf.layout.properties.UnitValue;
 import com.cptkagan.ecommerce.models.Order;
 import com.cptkagan.ecommerce.models.OrderItem;
 
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,7 +31,8 @@ public class ReceiptService {
     private static final String ITALIC_FONT_PATH = "/app/fonts/DejaVuSans-Oblique.ttf";
     private static final String LOGO_PATH = "/app/logos/logo.png";
 
-    public String generateInvoice(Order order) {
+    @Async
+    public CompletableFuture<String> generateInvoice(Order order) {
         String filePath = INVOICE_DIR + "invoice_" + order.getId() + ".pdf";
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         String formattedDate = order.getOrderDate().format(formatter);
@@ -135,11 +139,11 @@ public class ReceiptService {
             document.add(footer);
 
             document.close();
-            return filePath;
+            return CompletableFuture.completedFuture(filePath); // filePath;
 
         } catch (IOException e) {
             e.printStackTrace();
-            return null;
+            return CompletableFuture.completedFuture(null);
         }
     }
 }

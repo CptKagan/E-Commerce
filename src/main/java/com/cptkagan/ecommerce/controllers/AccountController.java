@@ -89,7 +89,7 @@ public class AccountController {
                responses = {
                     @ApiResponse(
                         responseCode = "200",
-                        description = "Verificaiton successful",
+                        description = "Verification successful",
                         content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(type= "string", example = "Account verified successfully!")
@@ -113,7 +113,7 @@ public class AccountController {
                responses = {
                     @ApiResponse(
                         responseCode = "200",
-                        description = "Verificaiton successful",
+                        description = "Verification successful",
                         content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(type= "string", example = "Account verified successfully! Please wait for your account to get reviewed and approved by a moderator.")

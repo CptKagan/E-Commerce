@@ -1,5 +1,6 @@
 package com.cptkagan.ecommerce.DTOs.responseDTO;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 import com.cptkagan.ecommerce.models.OrderItem;
@@ -11,7 +12,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class OrderItemResponse {
+public class OrderItemResponse implements Serializable{
     private Long id;
 
     private Long orderId;

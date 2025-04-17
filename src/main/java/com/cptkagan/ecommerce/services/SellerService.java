@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,9 +25,12 @@ import com.cptkagan.ecommerce.DTOs.requestDTO.NewProduct;
 import com.cptkagan.ecommerce.DTOs.requestDTO.SellerRegisterRequest;
 import com.cptkagan.ecommerce.DTOs.requestDTO.UpdateProduct;
 import com.cptkagan.ecommerce.DTOs.responseDTO.LowStockWarning;
+import com.cptkagan.ecommerce.DTOs.responseDTO.OrderItemResponse;
 import com.cptkagan.ecommerce.DTOs.responseDTO.OrdersSeller;
+import com.cptkagan.ecommerce.DTOs.responseDTO.ProductResponse;
 import com.cptkagan.ecommerce.DTOs.responseDTO.SalesReportResponse;
 import com.cptkagan.ecommerce.enums.OrderStatus;
+import com.cptkagan.ecommerce.exception.UnauthorizedAccessException;
 import com.cptkagan.ecommerce.models.Order;
 import com.cptkagan.ecommerce.models.OrderItem;
 import com.cptkagan.ecommerce.models.Product;
@@ -101,13 +105,13 @@ public class SellerService {
         return null;
     }
 
-    public ResponseEntity<?> addProduct(NewProduct newProduct, Authentication authentication) {
-        Seller seller = findByUserName(authentication.getName());
+    public ProductResponse addProduct(NewProduct newProduct, String userName) {
+        Seller seller = findByUserName(userName);
         if (seller == null) {
-            return ResponseEntity.badRequest().body("Invalid token!");
+            throw new UsernameNotFoundException("Invalid token!");
         }
         if (productRepository.existsBySellerIdAndName(seller.getId(), newProduct.getName())) {
-            return ResponseEntity.badRequest().body("Product already exists");
+            throw new IllegalArgumentException("Product already exists");
         }
         Product product = new Product(newProduct, seller);
         product.setCreatedAt(LocalDateTime.now());
@@ -118,7 +122,7 @@ public class SellerService {
         }
         seller.getProducts().add(product);
         sellerRepository.save(seller);
-        return ResponseEntity.ok("Product added successfully");
+        return new ProductResponse(product);
     }
 
     public ResponseEntity<?> updateProduct(UpdateProduct updateProduct, Long id, Authentication authentication) {
@@ -178,18 +182,18 @@ public class SellerService {
         return ResponseEntity.ok("Product updated successfully");
     }
 
-    public ResponseEntity<?> deleteProduct(Long id, Authentication authentication) {
-        Seller seller = findByUserName(authentication.getName());
+    public void deleteProduct(Long id, String userName) {
+        Seller seller = findByUserName(userName);
         if (seller == null) {
-            return ResponseEntity.badRequest().body("Invalid token!");
+            throw new UsernameNotFoundException("Invalid token!");
         }
         Optional<Product> products = productRepository.findById(id);
         if (!products.isPresent()) {
-            return ResponseEntity.badRequest().body("Product not found");
+            throw new IllegalArgumentException("Product not found");
         }
         Product product = products.get();
         if(!product.getSeller().getId().equals(seller.getId())){
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("You are not authorized to delete this product");
+            throw new UnauthorizedAccessException("You are not authorized to delete this product!");
         }
         Iterator<Product> iterator = seller.getProducts().iterator();
         while(iterator.hasNext()){
@@ -202,14 +206,13 @@ public class SellerService {
 
         sellerRepository.save(seller);
         productRepository.delete(product);
-        return ResponseEntity.ok("Product deleted successfully");
     }
 
-    public ResponseEntity<?> orderHistory(Authentication authentication) {  //A Stored Procedure might good for here, but ill stick to java based
+    public Set<OrdersSeller> orderHistory(String userName) {
         // Get the seller
-        Optional<Seller> sellerOpt = sellerRepository.findByUserName(authentication.getName());
+        Optional<Seller> sellerOpt = sellerRepository.findByUserName(userName);
         if(sellerOpt.isEmpty()){
-            return ResponseEntity.badRequest().body("Seller not found");
+            throw new UsernameNotFoundException("Seller not found!");
         }
         Seller seller = sellerOpt.get();
 
@@ -225,32 +228,32 @@ public class SellerService {
         }
         Set<OrdersSeller> ordersSeller = orderOfSeller.stream().map(order -> new OrdersSeller(order, seller.getId())).collect(Collectors.toSet());
 
-        return ResponseEntity.ok(ordersSeller);
+        return ordersSeller;
     }
 
-    public ResponseEntity<?> updateStatus(Long id, int status, Authentication authentication) { // STATUS UPDATE
-        Seller seller = findByUserName(authentication.getName());
+    public OrderItemResponse updateStatus(Long id, int status, String userName) { // STATUS UPDATE
+        Seller seller = findByUserName(userName);
         if(seller == null){
-            return ResponseEntity.badRequest().body("Seller not found!");
+            throw new UsernameNotFoundException("Seller not found!");
         }
 
         Optional<OrderItem> orderItemOpt = orderItemRepository.findById(id);
         if(orderItemOpt.isEmpty()){
-            return ResponseEntity.badRequest().body("Order not found!");
+            throw new IllegalArgumentException("Order not found!");
         }
 
         OrderItem orderItem = orderItemOpt.get();
         if(!orderItem.getProduct().getSeller().getId().equals(seller.getId())){
-            return ResponseEntity.badRequest().body("You are not authorized to update this order!");
+            throw new UnauthorizedAccessException("You are not authorized to update this order!");
         }
 
         if(orderItem.getStatus().equals(OrderStatus.DELIVERED) || orderItem.getStatus().equals(OrderStatus.CANCELED)){
-            return ResponseEntity.badRequest().body("Order is already delivered or cancelled, cannot be updated!");
+            throw new IllegalArgumentException("Order is already delivered or cancelled, cannot be updated!");
         }
 
         // Prevent updating to same status
         if(orderItem.getStatus().ordinal() == status){
-            return ResponseEntity.badRequest().body("Order is already in this status!");
+            throw new IllegalArgumentException("Order is already in this status!");
         }
 
         switch(status){
@@ -270,7 +273,7 @@ public class SellerService {
                 orderItem.setStatus(OrderStatus.CANCELED);
                 break;
             default:
-                return ResponseEntity.badRequest().body("Invalid status!");
+                throw new IllegalArgumentException("Invalid status!");
         }
 
         orderItem.setUpdatedAt(LocalDateTime.now());
@@ -279,18 +282,18 @@ public class SellerService {
             emailService.sendOrderStatusEmail(orderItem.getOrder().getBuyer().getEmail(), orderItem.getOrder().getId(), orderItem.getStatus().toString(), orderItem.getUpdatedAt());
         }
 
-        return ResponseEntity.ok("Order Status updated Successfully!");
+        return new OrderItemResponse(orderItem);
     }
 
-    public ResponseEntity<?> salesReport(Authentication authentication) {
-        Seller seller = findByUserName(authentication.getName());
+    public SalesReportResponse salesReport(String userName) {
+        Seller seller = findByUserName(userName);
         if(seller == null){
-            return ResponseEntity.badRequest().body("Seller not found!");
+            throw new UsernameNotFoundException("Seller not found!");
         }
 
         List<OrderItem> orderItems = orderItemRepository.findByProductSeller(seller.getId());
         if(orderItems.isEmpty()){
-            return ResponseEntity.badRequest().body("No sales found!");
+            return null;
         }
 
         double totalSales = 0;
@@ -339,30 +342,30 @@ public class SellerService {
             orderByStatus
         );
 
-        return ResponseEntity.ok(report);
+        return report;
     }
 
-    public ResponseEntity<?> lowStock(Authentication authentication) {
-        Seller seller = findByUserName(authentication.getName());
+    public List<LowStockWarning> lowStock(String userName) {
+        Seller seller = findByUserName(userName);
         if(seller == null){
-            return ResponseEntity.badRequest().body("Seller not found!");
+            throw new UsernameNotFoundException("Seller not found!");
         }
 
         List<Product> products = productRepository.findAllBySellerId(seller.getId());
         if(products.isEmpty()){
-            return ResponseEntity.badRequest().body("No products found!");
+            throw new IllegalArgumentException("No products found!");
         }
 
         List<Product> lowStockProducts = new ArrayList<>();
         for(Product product : products){
-            if(product.getStockQuantity() < 5){
+            if(product.getStockQuantity() < product.getLowStockWarning()){
                 lowStockProducts.add(product);
             }
         }
 
         List<LowStockWarning> lowStockWarnings = lowStockProducts.stream().map(LowStockWarning::new).collect(Collectors.toList());
 
-        return ResponseEntity.ok(lowStockWarnings);
+        return lowStockWarnings;
     }
 
     @Transactional
@@ -375,5 +378,13 @@ public class SellerService {
         Seller seller = sellerOpt.get();
         sellerRepository.save(seller);
         return ResponseEntity.ok("Account verified successfully! Please wait for your account to get reviewed and approved by a moderator.");
+    }
+
+    public List<Seller> getAllSellers(){
+        List<Seller> sellers = sellerRepository.findAll();
+        if(sellers.isEmpty()){
+            return null;
+        }
+        return sellers;
     }
 }

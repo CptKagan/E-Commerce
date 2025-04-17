@@ -1,14 +1,11 @@
 package com.cptkagan.ecommerce.services;
 
-import javax.management.RuntimeErrorException;
-
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.cptkagan.ecommerce.models.AbstractUser;
-import com.cptkagan.ecommerce.models.Seller;
 import com.cptkagan.ecommerce.security.JwtTokenUtil;
 
 @Service
